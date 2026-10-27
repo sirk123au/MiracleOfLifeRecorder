@@ -1,0 +1,4 @@
+flask>=3.0,<4
+obsws-python>=1.7,<2
+pystray>=0.19,<1
+Pillow>=10,<13
