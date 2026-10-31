@@ -361,6 +361,11 @@ Patient recording folders (version 1.0.44):
   media and its folder names; it does not remove names from existing USB files.
 
 Snapshots and saved album (version 1.0.40):
+- On Preview & record, press Ctrl+Alt+S to take a snapshot, or click Take
+  snapshot. The browser must have focus; this is not a Windows-wide shortcut.
+  It does not run on other pages, while editing fields, or inside a dialog.
+  Holding the keys does not take repeated images. Wait for the saved message
+  before taking another snapshot. Patient and USB checks remain the same.
 - Select the patient and choose Take snapshot beside the OBS preview. This
   saves a full canvas-resolution PNG of OBS's current program picture, before
   or during recording. OBS must be connected. During recording, the image

@@ -1,5 +1,10 @@
 # Release notes
 
+## 1.0.45
+
+- Added Ctrl+Alt+S to take a snapshot on Preview & record while the browser has focus.
+- Displayed the shortcut on the snapshot button. Held-key repeats and overlapping snapshot requests are ignored; patient fields, dialogs and other pages do not trigger it.
+
 ## 1.0.44
 
 - New patient video and snapshot folders include the patient ID and name, for example `MOL-12345678 - Jane Smith`.
