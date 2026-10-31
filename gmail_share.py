@@ -164,4 +164,3 @@ class Client:
 
     def job(self,job):
         with self.lock:return self.history().get(job)
-
