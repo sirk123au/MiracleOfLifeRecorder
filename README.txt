@@ -345,6 +345,21 @@ Patient records:
   database link, the recording remains in its patient folder; review and
   reconcile it manually. USB removal during a write can still damage data.
 
+Patient recording folders (version 1.0.44):
+- New real-patient media saves into Patients\<patient ID> - <patient name>,
+  for example MOL-12345678 - Jane Smith. Videos and snapshots for the same
+  saved patient name share this folder. Test Recordings remains separate.
+- Windows-invalid characters are replaced with spaces and long labels are
+  shortened to keep paths practical. The full patient ID is always retained.
+  A missing/unusable name falls back to the ID-only folder.
+- Existing media and folders are never renamed or moved by this change.
+  If the patient's name changes later, new saves use the updated folder label;
+  earlier media stays in its original folder. The album groups both by ID.
+- Recording recovery uses the scan's original saved name, not later patient
+  edits. Interrupted sessions from earlier versions keep their ID-only folder.
+- Names now appear in USB folder labels. Deleting a patient record keeps the
+  media and its folder names; it does not remove names from existing USB files.
+
 Snapshots and saved album (version 1.0.40):
 - Select the patient and choose Take snapshot beside the OBS preview. This
   saves a full canvas-resolution PNG of OBS's current program picture, before

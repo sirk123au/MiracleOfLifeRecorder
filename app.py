@@ -6,6 +6,7 @@ import obsws_python as obs
 import pystray
 from app_icon import tray_icon_image
 import patient_store
+import patient_folders
 import recording_recovery
 import storage_migration
 import obs_branding
@@ -66,7 +67,7 @@ def volume_id(root):
 
 def session_data():
     root=state['staging'].parent.parent
-    return {'patient':state['patient'],'test':state['test'],
+    return {'patient':state['patient'],'test':state['test'],'folder_version':state.get('folder_version',0),
             'started':state['started'].isoformat(),'record_id':state['record_id'],
             'pending':str(state['pending'].relative_to(root)) if state['pending'] else None,
             'planned':str(state['planned'].relative_to(root)) if state.get('planned') else None,
@@ -91,7 +92,14 @@ def recover_session():
             pid=check_id(data['patient'])
             if not isinstance(data['test'],bool) or not re.fullmatch('[a-f0-9]{32}',data['record_id']):raise ValueError()
             if not patient_store.matches_record(patient_root(root,data['test']),data['record_id'],pid):raise ValueError()
-            destination=root/'Test Recordings' if data['test'] else root/'Patients'/pid
+            folder_version=data.get('folder_version',0)
+            if type(folder_version) is not int or folder_version not in (0,1):raise ValueError()
+            folder=pid
+            if folder_version==1:
+                saved=patient_store.record_details(patient_root(root,data['test']),data['record_id'],pid)
+                if saved is None:raise ValueError()
+                folder=patient_folders.folder_name(pid,saved.get('name',''))
+            destination=root/'Test Recordings' if data['test'] else root/'Patients'/folder
             pending=None;filed=False
             # USB-relative paths must remain inside this session or its destination.
             for key in ('pending','planned'):
@@ -116,7 +124,7 @@ def recover_session():
                     return
                 pending=candidates[0]
             state.update(patient=pid,test=data['test'],started=datetime.fromisoformat(data['started']),
-                         record_id=data['record_id'],record_root=patient_root(root,data['test']),
+                         record_id=data['record_id'],record_root=patient_root(root,data['test']),folder_version=folder_version,
                          staging=staging,destination=destination,active=recording.output_active,
                          pending=pending,filed=filed,planned=None,recovery_blocked=False,
                          warning='',volume=volume,sequence=data.get('sequence'),message='Interrupted scan recovered. Use Stop & save to finish.' if recording.output_active else 'Unfinished save recovered. Select Retry save.')
@@ -940,7 +948,7 @@ def start():
             root=base_dir()
             if shutil.disk_usage(root.parent).free < int(settings['min_free_gb'])*1024**3:raise OSError()
             staging=root/'_staging'/secrets.token_hex(16);staging.mkdir(parents=True,exist_ok=False)
-            dest=root/('Test Recordings' if test else 'Patients') if test else root/'Patients'/pid
+            dest=root/'Test Recordings' if test else root/'Patients'/patient_folders.folder_name(pid,details['name'])
             dest.mkdir(parents=True,exist_ok=True)
             try:
                 c=client()
@@ -957,7 +965,7 @@ def start():
             record_id=patient_store.save(record_root,pid,details,d.get('expected_record_id'),check_duplicate=True)
             state.update(preflight_id=preflight,preflight_result=None,music_warning=music_start_warning)
             state.update(record_root=record_root,record_id=record_id,volume=volume_id(root),filed=False,planned=None,warning='',sequence=sequence,branding_warning='',outro_done=False)
-            state.update(active=True,patient=pid,test=test,started=requested_at,destination=dest,staging=staging,message='Recording started')
+            state.update(active=True,patient=pid,test=test,started=requested_at,destination=dest,staging=staging,folder_version=1,message='Recording started')
             try:
                 recording_recovery.begin(RECOVERY_POINTER,staging,session_data())
             except Exception:
@@ -1139,7 +1147,8 @@ def selected_media(key):
     if fingerprint!=expected:raise ValueError('Media changed')
     root=patient_root(base,relative.parts[0]=='Test Recordings')
     details=media_store.image_details(root,str(relative),volume) if path.suffix.lower()!='.mp4' else patient_store.for_recording(root,str(relative),volume)
-    pid=(details or {}).get('patient_id',relative.parts[1] if relative.parts[0]=='Patients' else 'TEST')
+    fallback=patient_folders.identity(relative.parts[1])[0] if relative.parts[0]=='Patients' else 'TEST'
+    pid=(details or {}).get('patient_id',fallback)
     return {'path':path,'relative':relative,'volume':volume,'size':info.st_size,'fingerprint':fingerprint,
             'kind':MEDIA_TYPES[path.suffix.lower()],'details':details,'patient_id':pid,
             'group':(relative.parts[0],pid.casefold()),'record_root':root}
@@ -1171,7 +1180,7 @@ def take_snapshot():
                 if latest and d.get('expected_record_id')==latest['id'] and all(latest.get(k,'')==v for k,v in details.items()):
                     record_id=latest['id']
                 else:record_id=patient_store.save(root,pid,details,d.get('expected_record_id'),check_duplicate=True)
-                destination=base/'Test Recordings' if test else base/'Patients'/pid
+                destination=base/'Test Recordings' if test else base/'Patients'/patient_folders.folder_name(pid,details['name'])
             connection=client()
             scene=connection.get_current_program_scene().current_program_scene_name
             video=connection.get_video_settings()
@@ -1217,7 +1226,8 @@ def album():
             for path in folder.rglob('*'):
                 if path.suffix.lower() not in MEDIA_TYPES or '_staging' in path.parts or not path.is_file() or not path.resolve().is_relative_to(base):continue
                 relative=path.relative_to(base);details=names.get(str(relative),{})
-                pid=details.get('patient_id',relative.parts[1] if not test else 'TEST');name=details.get('name','')
+                fallback_pid,_=patient_folders.identity(relative.parts[1]) if not test else ('TEST','')
+                pid=details.get('patient_id',fallback_pid);name=details.get('name','')
                 if query and query not in pid.casefold() and query not in name.casefold():continue
                 info=path.stat();entries.append((info.st_mtime,path,pid,name,test,info.st_size))
         entries.sort(key=lambda value:value[0],reverse=True)
@@ -1472,7 +1482,7 @@ def files():
             names=patient_store.recording_names(patient_root(base,folder.name=='Test Recordings'),volume_id(base))
             for f in folder.rglob('*.mp4'):
                 if not f.is_file() or not f.resolve().is_relative_to(base.resolve()):continue
-                rel=f.relative_to(base);patient=rel.parts[1] if rel.parts[0]=='Patients' else 'TEST'
+                rel=f.relative_to(base);patient,_=patient_folders.identity(rel.parts[1]) if rel.parts[0]=='Patients' else ('TEST','')
                 saved=names.get(str(rel),{})
                 patient=saved.get('patient_id',patient)
                 patient_name=saved.get('name','')

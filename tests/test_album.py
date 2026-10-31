@@ -35,7 +35,7 @@ class Album(unittest.TestCase):
         self.assertEqual(second.status_code,200,second.json)
         self.assertEqual(first.json['record_id'],second.json['record_id'])
         self.assertNotEqual(first.json['key'],second.json['key'])
-        files=list((self.root/'Patients'/'DUMMY').glob('*.png'))
+        files=list((self.root/'Patients'/'DUMMY - Example Patient').glob('*.png'))
         self.assertEqual(len(files),2)
         self.assertEqual(files[0].read_bytes(),self.png)
         album=self.post('/api/album',{'q':'Example'}).json['albums']

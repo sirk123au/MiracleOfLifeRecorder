@@ -302,7 +302,7 @@ class Workflows(unittest.TestCase):
         self.assertIn('Spotify could not be paused',response.json['message'])
         self.assertIsNone(recorder.state['pending'])
         self.assertFalse(source.exists())
-        self.assertEqual(len(list((self.root/'Patients'/'DUMMY').glob('*.mp4'))),1)
+        self.assertEqual(len(list(recorder.state['destination'].glob('*.mp4'))),1)
 
     def test_restart_warning_survives_recording_monitor_refresh(self):
         with patch.object(recorder.spotify_status,'control',side_effect=recorder.spotify_status.SpotifyControlError('Restart unavailable')):
@@ -389,7 +389,7 @@ class Workflows(unittest.TestCase):
         self.assertTrue(recorder.state['filed'])
         self.assertEqual(self.post('/api/stop').status_code, 200)
         self.obs.stop_record.assert_called_once()
-        self.assertEqual(len(list((self.root / 'Patients' / 'DUMMY').glob('*.mp4'))), 1)
+        self.assertEqual(len(list(recorder.state['destination'].glob('*.mp4'))), 1)
 
     def test_invalid_patient_details_are_not_saved(self):
         for details in [{'dob': '31/02/1990'}, {'dob': 'not a date'},
@@ -605,7 +605,7 @@ class Workflows(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn('Closing logo could not be completed', response.json['message'])
         self.obs.stop_record.assert_called_once()
-        self.assertEqual(len(list((self.root / 'Patients' / 'DUMMY').glob('*.mp4'))), 1)
+        self.assertEqual(len(list(recorder.state['destination'].glob('*.mp4'))), 1)
 
     def test_logo_upload_preserves_supplied_file(self):
         from PIL import Image
@@ -828,7 +828,7 @@ class Workflows(unittest.TestCase):
                 self.assertNotIn(secret, details)
         response.close()
         self.assertEqual(list((self.appdata / 'exports-temp').iterdir()), [])
-        self.assertEqual(len(list((self.root / 'Patients' / 'DUMMY').glob('*.mp4'))), 1)
+        self.assertEqual(len(list(recorder.state['destination'].glob('*.mp4'))), 1)
 
     def test_export_requires_authentication_and_rejects_arbitrary_fields(self):
         self.assertEqual(self.client.get('/export?id=anything').status_code, 403)
@@ -868,7 +868,7 @@ class Workflows(unittest.TestCase):
         with patch.object(recorder.shutil, 'disk_usage', return_value=types.SimpleNamespace(free=0)):
             response = self.client.get('/export?id='+key, headers=self.headers)
         self.assertEqual(response.status_code, 503)
-        self.assertEqual(len(list((self.root / 'Patients' / 'DUMMY').glob('*.mp4'))), 1)
+        self.assertEqual(len(list(recorder.state['destination'].glob('*.mp4'))), 1)
 
     def test_share_controls_render_without_inline_key_handlers(self):
         html = self.client.get('/').get_data(as_text=True)
@@ -901,7 +901,7 @@ class Workflows(unittest.TestCase):
         self.assertEqual([p.name for p in folder.iterdir()], ['recording.mp4'])
         self.assertEqual((folder / 'recording.mp4').read_bytes(), b'simulated recording')
         self.assertEqual(existing.read_bytes(), b'existing')
-        self.assertEqual(len(list((self.root / 'Patients' / 'DUMMY').glob('*.mp4'))), 1)
+        self.assertEqual(len(list(recorder.state['destination'].glob('*.mp4'))), 1)
         response2 = self.post('/api/family-usb/copy', {'key': key, 'destination': destination})
         self.assertEqual(response2.status_code, 200)
         self.assertNotEqual(response.json['folder'], response2.json['folder'])
@@ -941,7 +941,7 @@ class Workflows(unittest.TestCase):
         self.assertIn('.incomplete', response.json['error'])
         self.assertTrue(all(p.name.endswith('.incomplete') for p in family.iterdir()))
         self.assertFalse(recorder.family_copy_lock.locked())
-        self.assertEqual(len(list((self.root / 'Patients' / 'DUMMY').glob('*.mp4'))), 1)
+        self.assertEqual(len(list(recorder.state['destination'].glob('*.mp4'))), 1)
 
     def test_family_drive_list_excludes_recording_drive_and_internal_fixed_drives(self):
         kernel = Mock()
@@ -978,9 +978,9 @@ class Workflows(unittest.TestCase):
         self.assertEqual(self.post('/api/patients/delete', selection).status_code, 200)
         self.assertEqual(self.post('/api/patients/search', {'patient_id': 'DUMMY'}).json['records'], [])
         self.assertEqual(len(self.post('/api/patients/search', {'patient_id': 'OTHER'}).json['records']), 1)
-        self.assertEqual(len(list((self.root / 'Patients' / 'DUMMY').glob('*.mp4'))), 1)
+        self.assertEqual(len(list(recorder.state['destination'].glob('*.mp4'))), 1)
         self.assertEqual(len(self.post('/api/files').json['files']), 1)
-        recording = next((self.root / 'Patients' / 'DUMMY').glob('*.mp4'))
+        recording = next(recorder.state['destination'].glob('*.mp4'))
         self.assertIsNone(recorder.patient_store.for_recording(self.data_root, str(recording.relative_to(self.root)), 'TESTVOL'))
 
     def test_delete_requires_confirmation_and_authentication(self):
@@ -1130,7 +1130,7 @@ class Workflows(unittest.TestCase):
         self.output()
         self.post('/api/stop')
         item = self.post('/api/files').json['files'][0]
-        return item, next((self.root / 'Patients' / 'DUMMY').glob('*.mp4'))
+        return item, next(recorder.state['destination'].glob('*.mp4'))
 
     def test_delete_recording_preserves_patient_history_and_other_videos(self):
         item, path = self.recorded_video_for_deletion()
@@ -1201,7 +1201,7 @@ class Workflows(unittest.TestCase):
         self.start(name='Example Family')
         self.output()
         self.post('/api/stop')
-        source = next((self.root / 'Patients' / 'DUMMY').glob('*.mp4'))
+        source = next(recorder.state['destination'].glob('*.mp4'))
         relative = source.relative_to(self.root)
         remounted = self.root / 'another-drive-letter'
         new_path = remounted / relative

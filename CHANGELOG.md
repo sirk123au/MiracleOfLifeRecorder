@@ -1,5 +1,12 @@
 # Release notes
 
+## 1.0.44
+
+- New patient video and snapshot folders include the patient ID and name, for example `MOL-12345678 - Jane Smith`.
+- Patient names are made safe for Windows folders and long labels are shortened while retaining the complete ID.
+- Existing folders and media are preserved. Albums continue to group old and new folders by patient ID.
+- Interrupted recordings recover to their original folder, using that scan's saved name. Older ID-only recovery sessions keep their original destination.
+
 ## 1.0.43
 
 - Added manual update checking and verified installer downloads from GitHub Releases in Settings.

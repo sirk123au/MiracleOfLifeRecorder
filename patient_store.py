@@ -2,6 +2,7 @@
 import json
 import secrets
 import sqlite3
+import patient_folders
 from datetime import datetime
 
 
@@ -114,7 +115,7 @@ def generate_id(root, recording_root=None):
                 candidate = 'MOL-' + secrets.token_hex(4).upper()
                 if connection.execute('SELECT 1 FROM patient_records WHERE patient_id=?', (candidate,)).fetchone():
                     continue
-                if recording_root is not None and (recording_root / 'Patients' / candidate).exists():
+                if recording_root is not None and patient_folders.id_exists(recording_root,candidate):
                     continue
                 try:
                     connection.execute('INSERT INTO generated_patient_ids VALUES (?)', (candidate,))
@@ -203,6 +204,15 @@ def recording_names(root, volume=None):
                 for row in rows}
     finally:
         connection.close()
+
+
+def record_details(root, record_id, patient_id):
+    if not (root/'patient-records.sqlite3').is_file():return None
+    connection=connect(root)
+    try:
+        row=connection.execute('SELECT details FROM patient_records WHERE id=? AND patient_id=?',(record_id,patient_id)).fetchone()
+        return json.loads(row['details']) if row else None
+    finally:connection.close()
 
 
 def matches_record(root, record_id, patient_id):
