@@ -43,6 +43,7 @@ Name: "{userdesktop}\Miracle of Life Ultrasound Recorder"; Filename: "{app}\Mira
 Filename: "{app}\MiracleOfLifeRecorder.exe"; Description: "Open Miracle of Life Ultrasound Recorder"; Flags: nowait postinstall skipifsilent
 
 ; Settings, logos and recovery metadata live in APPDATA, not the install folder.
-; Patient records and videos live on USB. Neither is installed or removed here.
+; Patient records are in APPDATA; videos and snapshots are on USB.
+; These user files are neither installed nor removed here.
 ; AppId stays constant across updates. AppMutex blocks update/uninstall while
 ; the recorder runs; CloseApplications=no prevents forced recording shutdown.

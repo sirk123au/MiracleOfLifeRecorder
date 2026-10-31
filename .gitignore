@@ -6,6 +6,7 @@ build/
 dist/
 *.spec
 settings.json
+!.vscode/settings.json
 *.mp4
 *.mkv
 *.mov
@@ -24,3 +25,14 @@ Test Patient Records/
 _exports/
 ultrasound-share*.zip
 ultrasound-email*.eml
+
+# Patient images and email credentials/status
+*.png
+*.jpg
+*.jpeg
+*.dpapi
+client_secret*.json
+gmail*.json
+token*.json
+send-status.json
+send-status.tmp

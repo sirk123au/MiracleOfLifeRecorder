@@ -56,6 +56,7 @@ def delete(root, patient_id, expected_id):
             if connection.execute('SELECT 1 FROM patient_lifecycle WHERE patient_id=?', (patient_id,)).fetchone() is None:
                 raise ArchiveRequiredError()
             connection.execute('PRAGMA secure_delete=ON')
+            connection.execute('DELETE FROM patient_images WHERE record_id IN (SELECT id FROM patient_records WHERE patient_id=?)',(patient_id,))
             connection.execute('DELETE FROM patient_records WHERE patient_id=?', (patient_id,))
             connection.execute('DELETE FROM patient_lifecycle WHERE patient_id=?', (patient_id,))
     finally:
@@ -87,6 +88,9 @@ def connect(root):
             id TEXT PRIMARY KEY, patient_id TEXT NOT NULL COLLATE NOCASE,
             details TEXT NOT NULL, created_at TEXT NOT NULL, recording TEXT)''')
         connection.execute('CREATE INDEX IF NOT EXISTS patient_lookup ON patient_records(patient_id)')
+        connection.execute("""CREATE TABLE IF NOT EXISTS patient_images (relative_path TEXT NOT NULL,
+            volume TEXT NOT NULL,record_id TEXT NOT NULL,created_at TEXT NOT NULL,
+            PRIMARY KEY(relative_path,volume))""")
         connection.execute('''CREATE TABLE IF NOT EXISTS patient_lifecycle (
             patient_id TEXT PRIMARY KEY COLLATE NOCASE, archived_at TEXT NOT NULL)''')
         connection.execute('''CREATE TABLE IF NOT EXISTS generated_patient_ids (

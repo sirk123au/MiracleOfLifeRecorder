@@ -76,15 +76,51 @@ Windows installer and updates:
   started from other folders. A second launch opens the existing dashboard.
 - Settings remain in %APPDATA%\OBS-Ultrasound-Web\settings.json. Logos and
   recovery metadata remain in that APPDATA folder. The installer does not
-  overwrite or uninstall them. Patient databases stay in APPDATA; videos stay on USB.
+  overwrite or uninstall them. Patient databases stay in APPDATA; videos and snapshots stay on USB.
 - Back up the whole APPDATA recorder folder and video USB before updating. A newer app adds
   archive metadata without replacing existing patient history. Older builds
   do not understand archived patients; avoid downgrading a working archive.
-- No automatic internet updates are performed. Install a reviewed setup
+- Update checks and downloads are manual. Install a reviewed setup
   package to update. Builds are not code-signed; validate on a test PC before
   replacing a working version. Installer compilation is not an install or
   upgrade acceptance test.
 Installer built with Inno Setup: https://jrsoftware.org/
+
+Checking and downloading app updates (version 1.0.43):
+- Open Settings > Application updates > Check for updates. The app checks only
+  the latest published stable GitHub release from
+  https://github.com/sirk123au/MiracleOfLifeRecorder/releases
+  No GitHub login or token is needed on the operator's PC. No patient details,
+  credentials or recording files are sent to GitHub. No automatic checks run.
+- If a newer version exists, select Download update. The installer downloads
+  into APPDATA\OBS-Ultrasound-Web\updates, leaving the working app unchanged.
+  The download's size and SHA-256 digest must match GitHub's release metadata.
+  Missing digests, changed downloads, unsupported redirects and partial files
+  are rejected. Failed downloads do not become installers ready to open.
+- Choose Open download folder after verification. Finish recording/saving or
+  email sharing, then Exit Application from the system tray. Run the downloaded
+  Setup EXE and reopen the recorder. The installer refuses to replace a running
+  recorder. Settings, Gmail credentials, patient history and USB media stay
+  in place. There is no forced restart or unattended installation.
+- An offline PC, GitHub rate limit or a release without a complete installer
+  shows a clear message. Checks use numeric versions and never downgrade or
+  offer preview releases. Existing files are verified again before opening
+  their folder. Downloads are integrity checked but are not code-signed.
+
+Publishing a new release (developer):
+1. Change version.py, run tests, and build with build_installer.ps1.
+2. Review the source and CHANGELOG.md. Commit and push to origin/master.
+   Never stage APPDATA, recordings, patient images or credentials.
+3. Create and push tag v<version> pointing to that exact source commit.
+4. Run .venv\Scripts\python.exe packaging\publish_release.py.
+   It uses the existing GitHub Git sign-in without saving or printing tokens,
+   creates a draft release, uploads the versioned Setup EXE and SHA256SUMS.txt,
+   verifies GitHub's asset digests, then publishes it as the latest release.
+   It requires a clean source tree, matching local tag and pushed commit.
+   Existing published releases/assets are never overwritten. If interrupted,
+   inspect the draft on GitHub; rerunning can resume matching asset uploads.
+5. Test Settings > Check for updates from the previous version. Installers
+   belong in GitHub Release assets; dist remains excluded from source Git.
 
 Opening and closing video logos:
 1. Open Settings > Video logos. Upload an opening/closing PNG/JPEG image
@@ -283,7 +319,7 @@ Patient records:
 - Check Include archived patients to find and restore an archived patient.
   To permanently delete, archive first, then choose Permanently delete,
   confirm the warning and type the patient ID. This removes stored details
-  and history, but keeps recordings. Their linked information is then no
+  and history, but keeps recordings and snapshots. Their linked information is then no
   longer available for export. Real/test patient archives are separate.
 - Deletion is blocked during recording, pending saves and family USB copies.
   If details changed since the search, search again before deleting.
@@ -299,7 +335,7 @@ Patient records:
 - Use New patient to clear the form before entering a different patient.
 - Test patient details use APPDATA\OBS-Ultrasound-Web\test-patients.
 - Back up the entire APPDATA\OBS-Ultrasound-Web folder and the USB Ultrasound
-  Recordings folder while the app is closed. The USB holds video files only;
+  Recordings folder while the app is closed. The USB holds videos and snapshot images only;
   patient records, archives, reserved IDs, settings, logos, recovery metadata
   and export temporary files are in APPDATA. Patient details remain available
   without the USB, but viewing/copying videos requires their original drive.
@@ -309,48 +345,81 @@ Patient records:
   database link, the recording remains in its patient folder; review and
   reconcile it manually. USB removal during a write can still damage data.
 
-Email and sharing:
-- Saved recordings includes Delete recording. Confirm the displayed patient
-  name, ID and filename to permanently remove that single video. Patient
-  details/history and copies already shared with families are retained.
-  Deletion cannot be undone. Close playback first if Windows locks the file.
-  The app blocks deletion during recording, recovery, pending saves or USB
-  copies, and rejects videos changed since the list was loaded.
-- For a family handover, select Share / export, connect a separate family
-  USB, refresh the USB list and select its drive letter/label. Select Copy
-  to family USB. Patient details are optional and unchecked by default.
-- USB thumb drives and USB-connected external HDDs/SSDs are listed, including
-  USB disks Windows classifies as fixed. Internal fixed disks are excluded.
-  The recording drive is excluded from family USB destinations.
-- Each copy creates a new Miracle of Life date/time folder with a playable
-  recording.mp4 and, only when requested, patient-information.txt. Originals
-  and existing USB files are retained. SHA-256 verifies the copied video.
-- Keep both drives connected until verification completes, then safely
-  eject using Windows. An .incomplete folder is not ready for handover.
-  Failed copies stay marked .incomplete. FAT32 cannot hold single videos
-  larger than 4 GB. Prepare a suitable USB; the app never reformats drives.
-- In Saved recordings, select Share / export beside a recording.
-- Review the saved scan details and select which fields to include. Name,
-  scan type, entry date, ID, birth date and notes all require selection.
-  Details come from that scan, not later patient edits.
-- Download share package creates a ZIP with recording.mp4 and
-  patient-information.txt. Share that file using your chosen service.
-- Download email draft creates an .eml message with the selected information
-  and attached video. Open it in a compatible desktop mail application, add
-  the recipient, review and send. The app does not send email automatically.
-  Mail clients differ in how they open .eml drafts; you may need their edit
-  or resend action. Webmail may require attaching the ZIP manually instead.
-- Video attachments can exceed provider limits. Use the share package and
-  your approved file-sharing service for larger recordings.
-- Exports are not encrypted. Downloaded copies remain wherever the browser
-  saves them. Protect them like the original patient records.
-- Export preparation uses APPDATA\OBS-Ultrasound-Web\exports-temp and
-  reserves 100 MB of local space. Originals are not modified. Temporary files
-  are closed/deleted after download or failure. Intentional family USB
-  exports can still include a selected patient-information.txt file; this
-  is a handover copy, not the patient database or recovery metadata.
-- Older recordings without a linked scan entry export with a notice that
-  patient details are unavailable. The app does not guess the matching data.
+Snapshots and saved album (version 1.0.40):
+- Select the patient and choose Take snapshot beside the OBS preview. This
+  saves a full canvas-resolution PNG of OBS's current program picture, before
+  or during recording. OBS must be connected. During recording, the image
+  always belongs to that recording's patient, even if the form was edited.
+- Images are saved next to the patient's MP4 videos on the selected USB.
+  Test images stay in Test Recordings. Unique filenames never overwrite an
+  existing image. Patient details and image links stay in APPDATA.
+- Saved album groups images and videos by patient name and ID. Search by
+  name/ID, view image thumbnails, open original images or play videos.
+  The newest 500 files are shown; search to narrow a large collection.
+- Delete requires confirmation and removes only the selected image/video.
+  Patient history and other files remain. Files changed since the album
+  loaded are rejected. Deletion is blocked while recording/saving/sharing.
+  Permanent deletion cannot be undone; existing backups are unaffected.
+
+Gmail sending with an app password (version 1.0.42):
+One-time setup:
+1. Enable Google 2-Step Verification for the sending Gmail account.
+2. Visit https://myaccount.google.com/apppasswords and create an app password
+   for Miracle of Life Recorder. No Google Cloud project/custom app is needed.
+   Some work/school accounts, security-key-only accounts and Advanced Protection
+   do not offer app passwords. Ask the account administrator if unavailable.
+3. Open Settings > Gmail email. Enter the Gmail address and 16-character app
+   password, then Save Gmail settings. Spaces in Google's displayed password
+   are accepted. Use the app password, never the normal Google password.
+4. Select Check connection. This verifies secure SMTP sign-in without sending
+   a test email. A saved setting alone does not verify that Google accepts it.
+- Credentials are Windows current-user DPAPI encrypted in
+  APPDATA\OBS-Ultrasound-Web\gmail\smtp.dpapi. The password is never returned
+  to the browser, saved to settings.json or logged. Leave the password blank
+  when saving the same address to retain it. Changing the address requires
+  its app password. The password field clears after saving, including errors.
+- Changing the Google account password revokes its app passwords. Create and
+  save a new app password if sign-in stops working. Forget account removes
+  local saved credentials; revoke its app password in Google to revoke access.
+- Windows user encryption does not transfer to a different PC/user account;
+  configure Gmail again there. Old OAuth files from 1.0.40 are left untouched
+  but are not used. The installer does not overwrite stored Gmail settings.
+
+Daily use:
+- In Saved album, select images/videos from one patient and choose Email
+  selected, or Email beside one file. Enter the recipient, subject and message.
+  Patient information fields are optional and unchecked by default. Selected
+  fields come from the saved scan; differing scan details require separate
+  emails or leaving those fields unchecked. Images/videos may themselves
+  contain patient information: inspect them before sending.
+- Click Review email. Check the sender, recipient, subject, complete message
+  and attached filenames/sizes. Click Send email to send exactly that review.
+  Editing the form invalidates the review. Nothing sends during preparation,
+  connection checks or recording. Sending happens only after Send email.
+- Attachments upload automatically; no downloads/copy/paste needed. Neutral
+  attachment names (Ultrasound 01.png/mp4) omit patient IDs. Originals on USB
+  stay unchanged. Combined attachment size must be at most 25,000,000 bytes;
+  larger videos remain on USB for the usual family handover. No Drive upload
+  or automatic compression is performed. Encoded emails are capped at 35 MB.
+- Keep the original USB connected until sending finishes. Sending temporarily
+  blocks new recording, deletion, copies and settings changes. Attachment bytes
+  and their drive identity are checked against the reviewed files.
+- The app uses smtp.gmail.com on port 465 with certificate-verified TLS.
+  Gmail accepting an email does not guarantee recipient delivery. Review Gmail
+  Sent and any bounce messages when needed. Google account sending limits apply.
+- Duplicate clicks reuse the same send status and never send twice. Nothing
+  retries automatically. A timeout or lost confirmation may mean Gmail already
+  accepted the email: check Gmail Sent before making a new review and resending.
+- A small status journal in APPDATA\OBS-Ultrasound-Web\gmail\send-status.json
+  contains opaque job IDs and generic results only, with no patient details,
+  recipient addresses, message contents or credentials. Interrupted sends show
+  an unknown result after restart; no background resend occurs. Browser reloads
+  recover the current tab's status through an opaque session-storage job ID.
+- Status history keeps the newest 200 jobs. Email reviews expire after 15
+  minutes. No email addresses, patient details or message bodies enter URLs.
+- No Google credentials are bundled. Live sending must be checked with your
+  account and dummy data after configuration; automated tests simulate SMTP.
+Google setup help: https://support.google.com/accounts/answer/185833
 
 Before replacing a working EXE:
 Build and test a separate candidate using dummy patient information. Verify
@@ -422,3 +491,14 @@ The large timer starts immediately when Start recording is pressed and counts
 through preparation and the intro. Browser ticks do not wait for OBS requests.
 The server records the start-request time so a page reload restores elapsed
 time. A confirmed failed start or stopped recording resets the timer.
+
+Running from VS Code / source:
+Use the Run and Debug configuration "Miracle of Life Recorder (.venv)" (F5),
+or double-click start_app.bat. Both explicitly use the project's .venv Python.
+In a terminal, run .venv\Scripts\python.exe app.py.
+A different Python installation can run Flask/OBS but lack the Windows media
+packages required for Spotify, causing the header to show Check needed.
+If needed, select .venv\Scripts\python.exe using Python: Select Interpreter,
+then open a new terminal. Existing terminals may still use the old interpreter.
+Close the existing recorder from its tray menu after finishing any recording
+before relaunching; single-instance protection otherwise reopens the old app.

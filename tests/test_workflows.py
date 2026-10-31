@@ -11,8 +11,7 @@ from email.parser import BytesParser
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-# Keep hardware dependencies simulated; never contact a running OBS instance.
-sys.modules.setdefault('obsws_python', types.SimpleNamespace(ReqClient=Mock()))
+# Connections are mocked in setUp; importing the package does not contact OBS.
 import app as recorder
 
 
@@ -873,9 +872,10 @@ class Workflows(unittest.TestCase):
 
     def test_share_controls_render_without_inline_key_handlers(self):
         html = self.client.get('/').get_data(as_text=True)
-        self.assertIn('Download email draft', html)
-        self.assertIn('data-share-key=', html)
-        self.assertNotIn('onclick="reviewShare(', html)
+        self.assertTrue('Review email' in html)
+        self.assertTrue('data-album-select' in html)
+        self.assertFalse('Download email draft' in html)
+        self.assertFalse('onclick="reviewShare(' in html)
 
     def prepare_family_copy(self):
         self.start(name='Example Patient', notes='Private notes')
