@@ -15,9 +15,12 @@ python packaging\prepare_version.py
 if errorlevel 1 (echo Version resource failed. & goto failed)
 python packaging\prepare_icon.py
 if errorlevel 1 (echo Icon generation failed. & goto failed)
-python -m PyInstaller --noconfirm --clean --noupx --onefile --windowed --name MiracleOfLifeRecorder --icon build\application.ico --version-file build\windows_version_info.txt --collect-all flask --collect-all obsws_python --collect-all pystray --collect-submodules winrt app.py
+python -m PyInstaller --noconfirm --clean --noupx --onedir --windowed --name MiracleOfLifeRecorder --icon build\application.ico --version-file build\windows_version_info.txt --collect-all flask --collect-all obsws_python --collect-all pystray --collect-submodules winrt app.py
 if errorlevel 1 (echo Build failed. & goto failed)
-echo Built: dist\MiracleOfLifeRecorder.exe
+python packaging\verify_bundle.py
+if errorlevel 1 (echo Runtime bundle verification failed. & goto failed)
+echo Built: dist\MiracleOfLifeRecorder\MiracleOfLifeRecorder.exe
+echo Keep the entire folder together or distribute the Setup installer.
 if /i not "%~1"=="--no-pause" pause
 exit /b 0
 :failed

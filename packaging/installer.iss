@@ -32,7 +32,7 @@ SetupIconFile=..\build\application.ico
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Shortcuts:"
 
 [Files]
-Source: "..\dist\MiracleOfLifeRecorder.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\dist\MiracleOfLifeRecorder\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\README.txt"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]

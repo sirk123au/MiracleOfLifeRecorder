@@ -62,7 +62,7 @@ class Workflows(unittest.TestCase):
         self.old_settings = recorder.settings.copy()
         recorder.settings.update(recorder.DEFAULT)
         self.addCleanup(lambda: recorder.settings.update(self.old_settings))
-        recorder.state.update(music_warning='',observed_recording_mbps=None,preflight_id=None,preflight_result=None,active=False, pending=None, patient=None, started=None,
+        recorder.state.update(exiting=False,music_warning='',observed_recording_mbps=None,preflight_id=None,preflight_result=None,active=False, pending=None, patient=None, started=None,
                               destination=None, staging=None, message='Ready', warning='', storage_warning='', recovery_blocked=False, planned=None)
         recorder.playback_files.clear()
         recorder.recording_versions.clear()

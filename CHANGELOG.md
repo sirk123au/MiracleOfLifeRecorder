@@ -1,5 +1,13 @@
 # Release notes
 
+## 1.0.46
+
+- Added automatic stable-release checks after startup and every six hours, with verified downloads starting while idle. The Settings option is enabled by default and can be turned off.
+- Installed Windows copies apply a ready update silently after Exit Application from the tray. A detached helper waits for process exit, defers if the app is reopened, and rechecks the checksum; it never force-closes programs or reboots Windows. Source and portable runs download only.
+- Changed the installer to install the complete application runtime instead of a self-extracting EXE. Launching and closing the installed app no longer creates or removes a PyInstaller `_MEI` temporary folder.
+- Kept the same Setup EXE, shortcuts, update process and preserved AppData/USB storage. Standalone builds must keep their EXE and `_internal` folder together.
+- Added bounded retries for brief Windows locks on recording-recovery metadata. If cleanup still fails after a successful save, the app identifies cleanup separately and keeps Retry save available without recording or moving the video again.
+
 ## 1.0.45
 
 - Added Ctrl+Alt+S to take a snapshot on Preview & record while the browser has focus.

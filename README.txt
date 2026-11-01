@@ -3,7 +3,7 @@ MIRACLE OF LIFE ULTRASOUND RECORDER
 Windows build instructions:
 1. Install Python 3.11 or 3.12 (check Add Python to PATH).
 2. Run build_exe.bat.
-3. Run dist\MiracleOfLifeRecorder.exe.
+3. Run dist\MiracleOfLifeRecorder\MiracleOfLifeRecorder.exe.
 4. OBS must be running, with WebSocket enabled on port 5555.
 5. Select your recording USB drive in Settings, then Save settings.
 6. Test with dummy patient information before real use.
@@ -59,6 +59,16 @@ a missing default blackmagic input can fall back to the original scene;
 other selected video inputs are used normally. Studio Mode must be off.
 
 Windows installer and updates:
+- From version 1.0.46, the installer includes the full runtime beside the app.
+  The installed app no longer unpacks itself into a temporary _MEI folder on
+  each launch, removing that source of temporary-folder deletion errors on exit.
+  Operators still download one Setup EXE and use the same Windows shortcuts.
+  When running a developer build directly, keep the entire
+  dist\MiracleOfLifeRecorder folder together, including _internal. Copying
+  only its small EXE will not work. Build verification checks the runtime
+  before an installer is produced. Older dist root EXEs are not used.
+- This update does not delete leftover _MEI folders created by other programs
+  or older builds. Do not delete temporary folders belonging to running apps.
 - The generated setup package is in dist\installer. It installs for the
   current Windows user, with Start menu and optional desktop shortcuts.
   Python is not required on the operator's PC. OBS is installed separately.
@@ -80,32 +90,55 @@ Windows installer and updates:
 - Back up the whole APPDATA recorder folder and video USB before updating. A newer app adds
   archive metadata without replacing existing patient history. Older builds
   do not understand archived patients; avoid downgrading a working archive.
-- Update checks and downloads are manual. Install a reviewed setup
+- Automatic updates are configurable; manual installation remains available. Install a reviewed setup
   package to update. Builds are not code-signed; validate on a test PC before
   replacing a working version. Installer compilation is not an install or
   upgrade acceptance test.
 Installer built with Inno Setup: https://jrsoftware.org/
 
-Checking and downloading app updates (version 1.0.43):
-- Open Settings > Application updates > Check for updates. The app checks only
-  the latest published stable GitHub release from
+Automatic app updates (version 1.0.46):
+- Automatic updates are enabled by default in Settings > Application updates.
+  The app checks the latest published stable GitHub release about 15 seconds
+  after launch, then roughly every six hours. New checks and downloads start
+  only when no recording, pending save, recovery or email/USB sharing is active.
+  Offline errors and rate limits do not stop the app or trigger rapid retries.
+- After a newer installer downloads and passes its size/SHA-256 checks, it
+  waits for Exit Application from the tray. The app never closes itself in
+  the middle of work. Closing only the browser leaves the tray app running.
+- On exit, an installed Windows copy starts a hidden helper. It waits for the
+  recorder process to terminate, checks that another recorder has not opened,
+  re-verifies the installer hash and runs the per-user Setup silently. It
+  does not kill processes or reboot Windows, and does not reopen the app
+  after an intentional exit. The next normal launch uses the new version.
+- If the app is reopened too quickly, Windows blocks installation, or the
+  helper cannot finish, the update is postponed. The next Settings visit
+  shows a generic result. Open download folder remains available for a
+  manual install after closing the recorder. Settings, Gmail credentials,
+  patient history and USB media remain in their original locations.
+- Untick Automatically check, download and install updates when I exit, then
+  Save settings, to disable background checks/downloads and install-on-exit.
+  Manual Check for updates and Download update buttons remain available.
+- Source runs (app.py) and portable/uninstalled folders check and download
+  updates but do not install them automatically. Auto-install is limited to
+  a frozen Windows app beside its Inno Setup uninstaller. Install version
+  1.0.46 once using the current updater/Setup to enable future automatic
+  installations. The old 1.0.45 controller cannot silently update itself.
+- Updates come only from
   https://github.com/sirk123au/MiracleOfLifeRecorder/releases
-  No GitHub login or token is needed on the operator's PC. No patient details,
-  credentials or recording files are sent to GitHub. No automatic checks run.
-- If a newer version exists, select Download update. The installer downloads
-  into APPDATA\OBS-Ultrasound-Web\updates, leaving the working app unchanged.
-  The download's size and SHA-256 digest must match GitHub's release metadata.
-  Missing digests, changed downloads, unsupported redirects and partial files
-  are rejected. Failed downloads do not become installers ready to open.
-- Choose Open download folder after verification. Finish recording/saving or
-  email sharing, then Exit Application from the system tray. Run the downloaded
-  Setup EXE and reopen the recorder. The installer refuses to replace a running
-  recorder. Settings, Gmail credentials, patient history and USB media stay
-  in place. There is no forced restart or unattended installation.
-- An offline PC, GitHub rate limit or a release without a complete installer
-  shows a clear message. Checks use numeric versions and never downgrade or
-  offer preview releases. Existing files are verified again before opening
-  their folder. Downloads are integrity checked but are not code-signed.
+  No GitHub token or login is needed. Patient data, media and email credentials
+  are never uploaded. Installers download to APPDATA\OBS-Ultrasound-Web\updates.
+- Download sizes and SHA-256 digests must match GitHub's metadata. Missing
+  hashes, altered files, unsupported redirects and partial downloads are
+  rejected. Checks compare numeric stable versions and never downgrade.
+  Downloads are integrity checked but are not code-signed.
+- Small helper scripts and install-result.json remain inside the updates
+  folder. They contain update paths, checksums and generic status only, with
+  no patient data or email credentials. Existing recovery data is never
+  removed to bypass an unfinished scan. Automatic installation avoids
+  inheriting bundled DLL search paths that could lock runtime files.
+- There is no forced Windows reboot or automatic rollback of application
+  binaries. If setup fails, check the status and use the downloaded installer
+  manually. Backups of patient AppData and USB media remain recommended.
 
 Publishing a new release (developer):
 1. Change version.py, run tests, and build with build_installer.ps1.
@@ -246,6 +279,11 @@ https://learn.microsoft.com/en-us/uwp/api/windows.media.control.globalsystemmedi
 
 Recording safety and recovery:
 - Every recording uses a unique subfolder inside USB _staging.
+- Recovery-marker cleanup briefly retries Windows sharing locks. If it still
+  fails after the recording is filed and linked, the message distinguishes
+  saved media from incomplete cleanup. Retry save clears that same marker;
+  it never records or moves the saved video a second time. Keep the USB
+  connected and do not manually remove recovery metadata to bypass the check.
 - Stop failures keep controls locked so the operator can retry Stop & save.
 - Filing failures retain the original and offer Retry save without stopping
   OBS a second time. Restore the same USB drive and retry.

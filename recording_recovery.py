@@ -2,6 +2,7 @@
 import json
 import os
 import re
+import time
 from pathlib import Path
 
 
@@ -37,11 +38,22 @@ def read(pointer, root):
     return staging, data
 
 
+def remove_metadata(path):
+    """Retry only brief Windows sharing locks, never media or folder trees."""
+    for attempt in range(5):
+        try:
+            path.unlink(missing_ok=True)
+            return
+        except PermissionError as error:
+            if getattr(error,'winerror',None) not in (32,33) or attempt==4:raise
+            time.sleep(.2)
+
+
 def finish(pointer, staging):
     # A complete journal is safe to replay if pointer removal is interrupted.
-    pointer.unlink(missing_ok=True)
+    remove_metadata(pointer)
     try:
-        (staging / 'session.json').unlink(missing_ok=True)
+        remove_metadata(staging / 'session.json')
     except OSError:
         pass
 

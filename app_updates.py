@@ -1,4 +1,4 @@
-"""User-requested stable GitHub updates; downloads only, never runs installers."""
+"""Verified stable GitHub downloads and idle-only automatic update scheduling."""
 import hashlib
 import json
 import os
@@ -76,6 +76,7 @@ def verified(path,release):
 class Updater:
     def __init__(self,root,current):
         self.root=Path(root);self.current=current;self.lock=threading.RLock();self.release=None
+        self.next_auto_check=0
         self.result={'state':'idle','current_version':current,'message':'Select Check for updates to check GitHub Releases.'}
 
     def status(self):
@@ -151,3 +152,13 @@ class Updater:
                 self.set(state='error',message='The downloaded installer changed. Download it again before installing.')
                 raise UpdateError('The downloaded installer changed. Download it again before installing.')
             return self.root.resolve()
+
+    def automatic_tick(self,enabled,busy,now):
+        """Called by maintenance; no network or disk work starts during a scan."""
+        with self.lock:
+            if not enabled or busy or self.busy() or self.result['state']=='ready':return
+            if self.result['state']=='available':
+                self.download()
+            elif now>=self.next_auto_check:
+                self.next_auto_check=now+6*60*60
+                self.check()
