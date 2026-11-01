@@ -1,12 +1,28 @@
 """Verified family media handover; exclusive new folders, no media deletion."""
 import hashlib
 import os
-import secrets
 import shutil
 from datetime import datetime
+import patient_folders
 
 
 class CopyError(Exception):pass
+
+
+def folder_label(items):
+    patient_id=items[0].get('patient_id') or 'UNKNOWN'
+    name=next(((item.get('details') or {}).get('name','').strip() for item in items if (item.get('details') or {}).get('name','').strip()),'')
+    if not name:
+        for item in items:
+            stored_id,stored_name=patient_folders.identity(item['path'].parent.name)
+            if stored_id.casefold()==patient_id.casefold() and stored_name:
+                name=stored_name;break
+    safe=patient_folders.folder_name(patient_id,name)
+    name=safe[len(patient_id)+3:] if safe.startswith(patient_id+' - ') else 'Patient'
+    # A name such as CON.txt is reserved on Windows, even with more text after it.
+    if name.split('.')[0].rstrip().upper() in {'CON','PRN','AUX','NUL',*[f'COM{i}' for i in range(1,10)],*[f'LPT{i}' for i in range(1,10)]}:
+        name='_'+name
+    return name+' - '+patient_id+' - '+datetime.now().strftime('%Y-%m-%d_%H%M%S')
 
 
 def check_capacity(items,destination):
@@ -19,9 +35,14 @@ def check_capacity(items,destination):
 
 def copy_selected(items,destination,validate,progress):
     validate();check_capacity(items,destination)
-    folder='Miracle of Life '+datetime.now().strftime('%Y-%m-%d_%H%M%S')+'_'+secrets.token_hex(6)
-    incomplete=destination['root']/(folder+'.incomplete')
-    incomplete.mkdir(exist_ok=False)
+    base=folder_label(items)
+    for number in range(1,10001):
+        folder=base+(f'_{number}' if number>1 else '')
+        incomplete=destination['root']/(folder+'.incomplete')
+        if (destination['root']/folder).exists():continue
+        try:incomplete.mkdir(exist_ok=False);break
+        except FileExistsError:continue
+    else:raise CopyError('Could not create a unique family folder. Existing files were kept.')
     if incomplete.resolve().parent!=destination['root'].resolve():raise CopyError('The family USB folder could not be verified.')
     total=sum(item['size'] for item in items);done=0
     for index,item in enumerate(items,1):

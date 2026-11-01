@@ -430,8 +430,12 @@ Family USB handover from the album (version 1.0.47):
   filenames such as Ultrasound 01.mp4. Patient records and notes are not
   included. Email sharing remains available separately. USB copying does
   not have the 25 MB email limit; destination free space is checked first.
-- Each transfer creates a new Miracle of Life date/time folder. Existing
-  USB files and the recording originals are kept. The folder stays marked
+- Each transfer creates a folder named Patient Name - Patient ID - date/time,
+  for example Jane Smith - MOL-12345678 - 2026-11-01_143025. This is the copy
+  time on the recorder PC. Missing names use Patient; unsafe characters are
+  cleaned and long names shortened while retaining the full ID. Copies in
+  the same second add _2, _3, etc. rather than overwrite earlier folders.
+  Existing USB files and recording originals are kept. The folder stays marked
   .incomplete until all selected files pass SHA-256 verification. Keep both
   drives connected until the app confirms copying and verification finished.
 - Never give an .incomplete folder to the family. A disconnected/replaced

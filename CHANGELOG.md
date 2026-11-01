@@ -1,5 +1,10 @@
 # Release notes
 
+## 1.0.48
+
+- Family USB folders now use the patient name, patient ID and copy date/time, for example `Jane Smith - MOL-12345678 - 2026-11-01_143025`.
+- Folder labels use saved patient details, with a Windows-safe fallback when the name is missing. Same-second copies add a numbered suffix rather than overwriting existing or unfinished folders.
+
 ## 1.0.47
 
 - Restored family USB handover in Saved album alongside email, for individual files or a selected group of videos and snapshots from one patient.

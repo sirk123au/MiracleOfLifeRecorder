@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 import tempfile
 import types
+from datetime import datetime
 import unittest
 from unittest.mock import patch,Mock
 import family_copy
@@ -67,6 +68,38 @@ class MediaCopy(unittest.TestCase):
             family_copy.copy_selected([item],self.dest,validate,Mock())
         self.assertTrue(all(path.name.endswith('.incomplete') for path in self.destination.iterdir()))
 
+    def test_patient_name_id_and_copy_time_with_collision_suffix(self):
+        item=self.item('image.png',b'original')
+        item.update(patient_id='MOL-1234',details={'name':'Jane Smith'})
+        with patch.object(family_copy,'datetime') as clock:
+            clock.now.return_value=datetime(2026,11,1,14,30,25)
+            first=family_copy.copy_selected([item],self.dest,Mock(),Mock())
+            second=family_copy.copy_selected([item],self.dest,Mock(),Mock())
+        self.assertEqual(first,'Jane Smith - MOL-1234 - 2026-11-01_143025')
+        self.assertEqual(second,first+'_2')
+        self.assertEqual((self.destination/first/'Ultrasound 01.png').read_bytes(),b'original')
+
+    def test_label_sanitization_missing_name_and_unfinished_collision(self):
+        item=self.item('image.png',b'original')
+        item.update(patient_id='MOL-1234',details={'name':' Jane / Smith: '})
+        self.assertTrue(family_copy.folder_label([item]).startswith('Jane Smith - MOL-1234 - '))
+        item['details']['name']='CON.txt'
+        self.assertTrue(family_copy.folder_label([item]).startswith('_CON.txt - MOL-1234 - '))
+        item['details']['name']=''
+        with patch.object(family_copy,'datetime') as clock:
+            clock.now.return_value=datetime(2026,11,1,14,30,25)
+            base=family_copy.folder_label([item]);self.assertTrue(base.startswith('Patient - MOL-1234 - '))
+            (self.destination/(base+'.incomplete')).mkdir()
+            folder=family_copy.copy_selected([item],self.dest,Mock(),Mock())
+        self.assertEqual(folder,base+'_2')
+        self.assertTrue((self.destination/(base+'.incomplete')).exists())
+
+    def test_missing_database_link_can_use_existing_folder_label(self):
+        folder=self.root/'MOL-1234 - Jane Smith';folder.mkdir()
+        item=self.item('image.png',b'original');item['path'].rename(folder/'image.png');item['path']=folder/'image.png'
+        item.update(patient_id='MOL-1234',details=None)
+        self.assertTrue(family_copy.folder_label([item]).startswith('Jane Smith - MOL-1234 - '))
+
 
 class FamilyMediaWorkflows(unittest.TestCase):
     def setUp(self):
@@ -100,6 +133,7 @@ class FamilyMediaWorkflows(unittest.TestCase):
         self.setup_copy()
         response=self.copy();self.assertEqual(response.status_code,202,response.json)
         result=self.status();self.assertEqual(result['state'],'complete',result)
+        self.assertTrue(result['folder'].startswith('Example Patient - DUMMY - '))
         files=list((self.family/result['folder']).iterdir())
         self.assertEqual(len(files),2)
         self.assertEqual({path.suffix for path in files},{'.mp4','.png'})
