@@ -1,5 +1,11 @@
 # Release notes
 
+## 1.0.47
+
+- Restored family USB handover in Saved album alongside email, for individual files or a selected group of videos and snapshots from one patient.
+- Added background copying with progress and SHA-256 verification. Family USB copies are not subject to email's 25 MB limit; capacity and FAT32 file-size limits are checked before copying.
+- Preserved originals and existing family-drive files. Each transfer creates a unique folder, stays marked `.incomplete` until verified, and checks drive identities throughout. Repeated clicks reuse the same transfer status.
+
 ## 1.0.46
 
 - Added automatic stable-release checks after startup and every six hours, with verified downloads starting while idle. The Settings option is enabled by default and can be turned off.

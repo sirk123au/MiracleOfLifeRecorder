@@ -419,6 +419,33 @@ Snapshots and saved album (version 1.0.40):
   loaded are rejected. Deletion is blocked while recording/saving/sharing.
   Permanent deletion cannot be undone; existing backups are unaffected.
 
+Family USB handover from the album (version 1.0.47):
+- Connect a separate family USB drive. In Saved album, expand the correct
+  patient and tick the videos/images to give to the family, then select
+  Copy selected to family USB. USB copy on an individual file selects it alone.
+- Refresh USB drives, select the correct family drive letter/label, check
+  the displayed files and select Copy selected files. The recording drive
+  is excluded. USB thumb drives and USB-connected HDDs/SSDs are supported.
+- This copies selected MP4 videos and PNG/JPEG images only, with neutral
+  filenames such as Ultrasound 01.mp4. Patient records and notes are not
+  included. Email sharing remains available separately. USB copying does
+  not have the 25 MB email limit; destination free space is checked first.
+- Each transfer creates a new Miracle of Life date/time folder. Existing
+  USB files and the recording originals are kept. The folder stays marked
+  .incomplete until all selected files pass SHA-256 verification. Keep both
+  drives connected until the app confirms copying and verification finished.
+- Never give an .incomplete folder to the family. A disconnected/replaced
+  drive, changed source or verification failure stops the transfer. Failed
+  partial folders remain clearly marked; no originals are deleted. Safely
+  eject the family USB in Windows after a successful copy.
+- The progress display continues in the background if the dialog closes.
+  Duplicate clicks reuse the same transfer. A browser reload can recover the
+  current tab's status. If status is lost after a crash/restart, check the USB
+  before starting another copy; transfers never restart automatically.
+- Recording, deletion, settings changes, app exit and automatic installation
+  are blocked during the copy. FAT32 cannot hold a single file above 4 GB;
+  use a suitable exFAT/NTFS USB for larger videos. The app never reformats it.
+
 Gmail sending with an app password (version 1.0.42):
 One-time setup:
 1. Enable Google 2-Step Verification for the sending Gmail account.
