@@ -9,6 +9,7 @@ import re
 import smtplib
 import ssl
 import threading
+from urllib.parse import urlsplit
 import secure_store
 
 MAX_ATTACHMENTS=25_000_000
@@ -26,12 +27,28 @@ def validate_recipient(value):
     return value
 
 
-def build_message(sender,recipient,subject,body,attachments):
+def validate_download_link(value):
+    try:
+        if not isinstance(value,str) or len(value)>512:raise ValueError()
+        value=value.strip()
+        if any(char.isspace() or ord(char)<32 for char in value):raise ValueError()
+        parsed=urlsplit(value)
+        match=re.fullmatch(r'/d/([0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12})/?',parsed.path)
+        if parsed.scheme!='https' or parsed.hostname not in ('swisstransfer.com','www.swisstransfer.com') or parsed.port not in (None,443) or parsed.username or parsed.password or parsed.query or parsed.fragment or not match:
+            raise ValueError()
+        return 'https://www.swisstransfer.com/d/'+match.group(1).lower()
+    except (ValueError,TypeError):raise GmailError('Paste the HTTPS SwissTransfer download link, in the form https://www.swisstransfer.com/d/... .') from None
+
+
+def build_message(sender,recipient,subject,body,attachments,download_link=None):
     validate_recipient(sender);validate_recipient(recipient)
     if not isinstance(subject,str) or not subject.strip() or len(subject)>200 or any(c in subject for c in '\r\n'):
         raise GmailError('Enter a subject up to 200 characters on one line.')
     if not isinstance(body,str) or len(body)>20000:raise GmailError('The email message is too long.')
-    if not 1<=len(attachments)<=50 or sum(item['size'] for item in attachments)>MAX_ATTACHMENTS:
+    if download_link is not None:
+        link=validate_download_link(download_link)
+        if attachments or link not in body:raise GmailError('Review the download-link email again. It must contain the link and no attachments.')
+    elif not 1<=len(attachments)<=50 or sum(item['size'] for item in attachments)>MAX_ATTACHMENTS:
         raise GmailError('Select 1 to 50 files totalling no more than 25 MB. No email was sent.')
     message=EmailMessage(policy=SMTP)
     message['From']=sender;message['To']=recipient;message['Subject']=subject
@@ -119,12 +136,12 @@ class Client:
             try:smtp.close()
             except Exception:pass
 
-    def send(self,recipient,subject,body,attachments,revision):
+    def send(self,recipient,subject,body,attachments,revision,download_link=None):
         with self.lock:
             if self.revision()!=revision:raise GmailError('Gmail settings changed. Review the email again before sending.')
             saved=self.credentials()
         # Build and validate all bytes before making any SMTP connection.
-        try:message=build_message(saved['email'],recipient,subject,body,attachments)
+        try:message=build_message(saved['email'],recipient,subject,body,attachments,download_link)
         except OSError:raise GmailError('Attachments could not be read. Reconnect the original USB and review again. No email was sent.') from None
         smtp=self.connection(saved)
         try:

@@ -1,5 +1,11 @@
 # Release notes
 
+## 1.0.49
+
+- Added a SwissTransfer download-link option to album emails, alongside existing attachments and family USB handover. Larger selections open in link mode; attachment emails retain the 25 MB limit.
+- Uploads stay manual in the browser. The app can open the selected files' folders, then emails the pasted HTTPS SwissTransfer link using the existing Gmail app-password setup. No OAuth client, browser credential access or automatic third-party upload is introduced.
+- Required confirmation that the upload is complete and the link belongs to the selected patient, with a frozen email review before Send. The dialog shows the selected patient's name/ID, clears the recipient and custom message when switching patients, and clears the link for each new selection. Link emails contain no file attachments and never fetch the pasted URL.
+
 ## 1.0.48
 
 - Family USB folders now use the patient name, patient ID and copy date/time, for example `Jane Smith - MOL-12345678 - 2026-11-01_143025`.

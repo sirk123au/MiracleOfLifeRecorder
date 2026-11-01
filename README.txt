@@ -488,7 +488,7 @@ Daily use:
 - Attachments upload automatically; no downloads/copy/paste needed. Neutral
   attachment names (Ultrasound 01.png/mp4) omit patient IDs. Originals on USB
   stay unchanged. Combined attachment size must be at most 25,000,000 bytes;
-  larger videos remain on USB for the usual family handover. No Drive upload
+  larger videos can use the SwissTransfer link option or family USB handover. No Drive upload
   or automatic compression is performed. Encoded emails are capped at 35 MB.
 - Keep the original USB connected until sending finishes. Sending temporarily
   blocks new recording, deletion, copies and settings changes. Attachment bytes
@@ -509,6 +509,39 @@ Daily use:
 - No Google credentials are bundled. Live sending must be checked with your
   account and dummy data after configuration; automated tests simulate SMTP.
 Google setup help: https://support.google.com/accounts/answer/185833
+
+SwissTransfer download-link emails (version 1.0.49):
+- Select the correct patient's video/images in Saved album and choose Email
+  selected (or Email beside one file). The Send as dropdown offers attachments
+  or a SwissTransfer download link. Selections above 25 MB open in link mode;
+  this does not upload files or send an email automatically.
+- Choose Open recording folder to locate the selected files on the recorder
+  PC. Then Open SwissTransfer opens its normal website. Upload only the chosen
+  patient's files, choose its Link option and wait for upload confirmation.
+  SwissTransfer may require sender-email verification, without a custom OAuth
+  app. Complete uploads from the recorder PC where the recording USB is attached.
+- Use password protection and send the password separately. Check the transfer's
+  expiry when uploading and tell the family when the link will stop working.
+  The recorder does not set passwords, upload data or control transfer expiry.
+- Paste the HTTPS SwissTransfer download link into the recorder. Confirm the
+  upload finished and the link belongs to this patient. Enter the recipient,
+  optionally choose patient fields, then Review email and Send email.
+- The review contains the complete message/link and states that no attachments
+  will be sent. The app uses its existing encrypted Gmail credentials. The
+  confirmed email link can be sent after review even if the USB is disconnected,
+  because the manual upload is already complete. Attachment mode still needs USB.
+- Only swisstransfer.com/d/<transfer-ID> HTTPS links are accepted. Links are
+  validated locally, never fetched or opened automatically by the backend.
+  The app cannot verify which files the third-party link contains, whether a
+  password was set or whether the transfer has expired. Check this manually.
+- Opening a new selection clears the previous transfer link and confirmation.
+  Switching patients also clears the previous recipient and custom message.
+  Changing the link invalidates its confirmation and the prepared email.
+  The reviewed link is frozen with the recipient/message. Send cannot substitute
+  a different URL. Single-patient grouping and no-automatic-retry rules remain.
+- No recording-duration limit, payment tier or recording quality setting changes
+  are introduced. Video duration alone does not determine attachment size.
+SwissTransfer instructions: https://www.infomaniak.com/en/support/faq/2557/
 
 Before replacing a working EXE:
 Build and test a separate candidate using dummy patient information. Verify
