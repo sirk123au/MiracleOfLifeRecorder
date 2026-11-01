@@ -3,6 +3,7 @@ from email.message import EmailMessage
 from email.policy import SMTP
 from email.utils import parseaddr,formatdate,make_msgid
 import hashlib
+from html import escape
 import json
 import os
 import re
@@ -13,6 +14,7 @@ from urllib.parse import urlsplit
 import secure_store
 
 MAX_ATTACHMENTS=25_000_000
+SEND_TIMEOUT=600  # MIME attachments can take minutes to upload on a slower connection.
 
 
 class GmailError(Exception):pass
@@ -28,32 +30,40 @@ def validate_recipient(value):
 
 
 def validate_download_link(value):
-    try:
-        if not isinstance(value,str) or len(value)>512:raise ValueError()
-        value=value.strip()
-        if any(char.isspace() or ord(char)<32 for char in value):raise ValueError()
-        parsed=urlsplit(value)
-        match=re.fullmatch(r'/d/([0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12})/?',parsed.path)
-        if parsed.scheme!='https' or parsed.hostname not in ('swisstransfer.com','www.swisstransfer.com') or parsed.port not in (None,443) or parsed.username or parsed.password or parsed.query or parsed.fragment or not match:
-            raise ValueError()
-        return 'https://www.swisstransfer.com/d/'+match.group(1).lower()
-    except (ValueError,TypeError):raise GmailError('Paste the HTTPS SwissTransfer download link, in the form https://www.swisstransfer.com/d/... .') from None
+    import r2_share
+    try:return r2_share.validate_link(value)
+    except r2_share.R2Error as error:raise GmailError(str(error)) from None
+
 
 
 def build_message(sender,recipient,subject,body,attachments,download_link=None):
     validate_recipient(sender);validate_recipient(recipient)
     if not isinstance(subject,str) or not subject.strip() or len(subject)>200 or any(c in subject for c in '\r\n'):
         raise GmailError('Enter a subject up to 200 characters on one line.')
-    if not isinstance(body,str) or len(body)>20000:raise GmailError('The email message is too long.')
+    if not isinstance(body,str) or len(body)>220000:raise GmailError('The email message is too long.')
     if download_link is not None:
-        link=validate_download_link(download_link)
-        if attachments or link not in body:raise GmailError('Review the download-link email again. It must contain the link and no attachments.')
-    elif not 1<=len(attachments)<=50 or sum(item['size'] for item in attachments)>MAX_ATTACHMENTS:
+        links=download_link if isinstance(download_link,list) else [download_link]
+        if not 1<=len(links)<=50:raise GmailError('Review the video download links again.')
+        labels={}
+        for index,entry in enumerate(links,1):
+            link=validate_download_link(entry.get('url') if isinstance(entry,dict) else entry)
+            name=entry.get('name') if isinstance(entry,dict) else f'Ultrasound {index:02d}.mp4'
+            if not isinstance(name,str) or not name.strip() or len(name)>255 or any(ord(c)<32 for c in name):raise GmailError('Review the video filenames again.')
+            labels[link]=name
+        links=list(labels)
+        if any(link not in body for link in links):raise GmailError('Review the video download links again.')
+        if any(getattr(item.get('path'),'suffix','').lower() not in ('.png','.jpg','.jpeg') for item in attachments):raise GmailError('Only images can be attached alongside video links.')
+    if (download_link is None and not attachments) or len(attachments)>50 or sum(item['size'] for item in attachments)>MAX_ATTACHMENTS:
         raise GmailError('Select 1 to 50 files totalling no more than 25 MB. No email was sent.')
     message=EmailMessage(policy=SMTP)
     message['From']=sender;message['To']=recipient;message['Subject']=subject
     message['Date']=formatdate(localtime=True);message['Message-ID']=make_msgid(domain='miracle-of-life.local')
     message.set_content(body)
+    if download_link is not None:
+        # Plain text remains available to mail readers without HTML support.
+        replacements={escape(link):'<a href="'+escape(link,quote=True)+'">'+escape(name)+'</a>' for link,name in labels.items()}
+        html=re.sub('|'.join(re.escape(link) for link in sorted(replacements,key=len,reverse=True)),lambda match:replacements[match.group()],escape(body))
+        message.add_alternative('<!doctype html><html><body><div style="white-space:pre-wrap;font-family:Arial,sans-serif">'+html+'</div></body></html>',subtype='html')
     for index,item in enumerate(attachments,1):
         kinds={'.png':('image','png'),'.jpg':('image','jpeg'),'.jpeg':('image','jpeg'),'.mp4':('video','mp4')}
         suffix=item['path'].suffix.lower()
@@ -136,22 +146,42 @@ class Client:
             try:smtp.close()
             except Exception:pass
 
-    def send(self,recipient,subject,body,attachments,revision,download_link=None):
+    def send(self,recipient,subject,body,attachments,revision,download_link=None,progress=None):
+        def report(stage,message):
+            if progress is not None:
+                try:progress(stage,message)
+                except Exception:pass  # A progress display failure must never cause a duplicate send.
+        report('preparing','Preparing email and checking attachments...')
         with self.lock:
             if self.revision()!=revision:raise GmailError('Gmail settings changed. Review the email again before sending.')
             saved=self.credentials()
         # Build and validate all bytes before making any SMTP connection.
         try:message=build_message(saved['email'],recipient,subject,body,attachments,download_link)
         except OSError:raise GmailError('Attachments could not be read. Reconnect the original USB and review again. No email was sent.') from None
+        report('connecting','Connecting and signing in to Gmail...')
         smtp=self.connection(saved)
+        try:smtp.sock.settimeout(SEND_TIMEOUT)
+        except Exception:
+            try:smtp.close()
+            except Exception:pass
+            raise GmailError('The Gmail connection closed before sending. Check connection in Settings. No email was sent.') from None
         try:
+            report('sending','Sending email to Gmail. Please wait for confirmation...')
             refused=smtp.send_message(message,from_addr=saved['email'],to_addrs=[recipient])
             if refused:raise GmailError('Gmail did not accept the recipient. No email was sent.')
         except (smtplib.SMTPRecipientsRefused,smtplib.SMTPSenderRefused,smtplib.SMTPDataError):
             raise GmailError('Gmail rejected the message or recipient. Check the address, attachment size and account sending limits before reviewing again.') from None
         except GmailError:raise
-        except Exception:
-            raise SendUncertain('Sending could not be confirmed. Check Gmail Sent before sending again; the email may already have been accepted. No automatic retry will occur.') from None
+        except smtplib.SMTPNotSupportedError:
+            raise GmailError('Gmail could not send using this email address format. Check the sender and recipient addresses. No email was sent.') from None
+        except (TimeoutError,smtplib.SMTPServerDisconnected,ssl.SSLError) as error:
+            reason='Gmail confirmation timed out' if isinstance(error,TimeoutError) else 'The connection to Gmail was interrupted'
+            raise SendUncertain(reason+'. Check Gmail Sent before sending again; the email may already have been accepted. No automatic retry will occur.') from None
+        except Exception as error:
+            # Class name only: never surface SMTP responses, email addresses or raw errors.
+            kind=type(error).__name__
+            if not re.fullmatch(r'[A-Za-z][A-Za-z0-9_]{0,63}',kind):kind='UnexpectedError'
+            raise SendUncertain('Sending could not be confirmed ('+kind+'). Check Gmail Sent before sending again; the email may already have been accepted. No automatic retry will occur.') from None
         finally:
             # A failed QUIT must not turn a confirmed acceptance into a retry.
             try:smtp.close()

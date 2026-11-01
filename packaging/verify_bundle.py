@@ -21,7 +21,7 @@ def verify():
     if any(value[-1] in ('b','x','Z') for value in archive.toc.values()):
         raise RuntimeError('The EXE contains extractable runtime files; a one-folder build is required.')
     pyz=archive.open_embedded_archive(next(key for key in archive.toc if key.endswith('.pyz')))
-    required=('app_updates','update_install','gmail_share','family_copy','secure_store','patient_folders','obs_branding','spotify_status')
+    required=('app_updates','update_install','gmail_share','r2_share','boto3','botocore','family_copy','secure_store','patient_folders','obs_branding','spotify_status')
     if any(key not in pyz.toc for key in required):raise RuntimeError('The bundle is missing an application module.')
     if __version__ not in pyz.extract('version').co_consts:raise RuntimeError('Bundle version does not match the release source.')
     profile=ROOT/'build'/'runtime-check-profile';profile.mkdir(parents=True,exist_ok=True)

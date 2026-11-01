@@ -1,0 +1,33 @@
+
+@page { size:A4; margin:0; }
+* {box-sizing:border-box}
+body {margin:0;color:#493b43;background:white;font-family:"Segoe UI",Arial,sans-serif;font-size:10pt;line-height:1.45}
+.sheet {width:210mm;height:297mm;padding:14mm 16mm 19mm;position:relative;page-break-after:always;overflow:hidden}
+.sheet:last-child {page-break-after:auto}
+.brand {background:#754b61;color:white;border-radius:12px;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:20px;height:29mm}
+.brand img {width:195px;height:auto;max-height:72px;object-fit:contain}
+.brand span {text-align:right;font-size:9pt;letter-spacing:.4px}
+.eyebrow {margin:19px 0 2px;color:#aa718b;letter-spacing:1.6px;font-weight:650;font-size:8.5pt;text-transform:uppercase}
+h1 {margin:0 0 5px;font-size:23pt;line-height:1.15;color:#754b61;font-weight:650}
+.intro {font-size:10pt;margin:0 0 15px;color:#6e5d66}
+.download {background:#fbf1f5;border:1px solid #ead7e0;border-radius:10px;padding:13px 16px;margin:12px 0 15px}
+.download strong {display:block;font-size:11pt;margin-bottom:6px;color:#754b61}
+.button {display:inline-block;text-decoration:none;background:#a56b86;color:white;padding:8px 14px;border-radius:6px;font-weight:600;font-size:9.5pt}
+.small {font-size:8.5pt;color:#73616a;margin:7px 0 0}
+h2 {font-size:12pt;color:#754b61;line-height:1.2;margin:15px 0 7px;display:flex;align-items:center;gap:8px}
+.number {display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:#ead7e0;color:#754b61;width:23px;height:23px;font-size:10pt;flex:none}
+ol,ul {padding-left:20px;margin:5px 0 0}
+li {margin:4px 0}
+p {margin:6px 0}
+.note {background:#fff9ef;border-left:3px solid #d2b97f;padding:9px 12px;border-radius:0 6px 6px 0;font-size:9pt;margin:13px 0}
+.columns {display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.card {background:#fcf8fa;border:1px solid #ecdfe5;border-radius:8px;padding:10px 13px}
+.card h2 {margin-top:2px}
+.card p {font-size:9.2pt}
+.key {display:inline-block;border:1px solid #d3b9c6;border-bottom:2px solid #c3a0b1;border-radius:4px;padding:2px 7px;color:#754b61;background:white;font-size:9pt;font-weight:600}
+a {color:#87516b;text-underline-offset:2px}
+footer {position:absolute;bottom:10mm;left:16mm;right:16mm;border-top:1px solid #e8d7df;padding-top:7px;font-size:8pt;color:#8b7580;display:flex;justify-content:space-between}
+.compact {font-size:9.2pt}
+.support {display:grid;grid-template-columns:96px 1fr;gap:6px 10px;font-size:9pt;margin:9px 0}
+.support dt {font-weight:650;color:#754b61}
+.support dd {margin:0}

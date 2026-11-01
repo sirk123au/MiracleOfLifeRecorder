@@ -65,6 +65,7 @@ class Workflows(unittest.TestCase):
         recorder.state.update(exiting=False,music_warning='',observed_recording_mbps=None,preflight_id=None,preflight_result=None,active=False, pending=None, patient=None, started=None,
                               destination=None, staging=None, message='Ready', warning='', storage_warning='', recovery_blocked=False, planned=None)
         recorder.playback_files.clear()
+        recorder.r2_jobs.clear()
         recorder.recording_versions.clear()
         recorder.obs_launch = None
         self.real_prepare_capture = recorder.obs_branding.prepare_capture

@@ -1,5 +1,11 @@
 MIRACLE OF LIFE ULTRASOUND RECORDER
 
+Client handover guide:
+Run .venv\Scripts\python.exe packaging\create_client_guide.py to generate the
+current version's guide HTML and email template in dist\client. Render the
+HTML to PDF before publishing. publish_release.py includes a matching guide
+PDF in the release and checksum file when it is present.
+
 Windows build instructions:
 1. Install Python 3.11 or 3.12 (check Add Python to PATH).
 2. Run build_exe.bat.
@@ -399,7 +405,7 @@ Patient recording folders (version 1.0.44):
   media and its folder names; it does not remove names from existing USB files.
 
 Snapshots and saved album (version 1.0.40):
-- On Preview & record, press Ctrl+Alt+S to take a snapshot, or click Take
+- On Preview & record, press F8 (or Ctrl+Alt+S) to take a snapshot, or click Take
   snapshot. The browser must have focus; this is not a Windows-wide shortcut.
   It does not run on other pages, while editing fields, or inside a dialog.
   Holding the keys does not take repeated images. Wait for the saved message
@@ -488,7 +494,7 @@ Daily use:
 - Attachments upload automatically; no downloads/copy/paste needed. Neutral
   attachment names (Ultrasound 01.png/mp4) omit patient IDs. Originals on USB
   stay unchanged. Combined attachment size must be at most 25,000,000 bytes;
-  larger videos can use the SwissTransfer link option or family USB handover. No Drive upload
+  larger videos can use the Cloudflare R2 upload option or family USB handover. No Drive upload
   or automatic compression is performed. Encoded emails are capped at 35 MB.
 - Keep the original USB connected until sending finishes. Sending temporarily
   blocks new recording, deletion, copies and settings changes. Attachment bytes
@@ -510,38 +516,50 @@ Daily use:
   account and dummy data after configuration; automated tests simulate SMTP.
 Google setup help: https://support.google.com/accounts/answer/185833
 
-SwissTransfer download-link emails (version 1.0.49):
-- Select the correct patient's video/images in Saved album and choose Email
-  selected (or Email beside one file). The Send as dropdown offers attachments
-  or a SwissTransfer download link. Selections above 25 MB open in link mode;
-  this does not upload files or send an email automatically.
-- Choose Open recording folder to locate the selected files on the recorder
-  PC. Then Open SwissTransfer opens its normal website. Upload only the chosen
-  patient's files, choose its Link option and wait for upload confirmation.
-  SwissTransfer may require sender-email verification, without a custom OAuth
-  app. Complete uploads from the recorder PC where the recording USB is attached.
-- Use password protection and send the password separately. Check the transfer's
-  expiry when uploading and tell the family when the link will stop working.
-  The recorder does not set passwords, upload data or control transfer expiry.
-- Paste the HTTPS SwissTransfer download link into the recorder. Confirm the
-  upload finished and the link belongs to this patient. Enter the recipient,
-  optionally choose patient fields, then Review email and Send email.
-- The review contains the complete message/link and states that no attachments
-  will be sent. The app uses its existing encrypted Gmail credentials. The
-  confirmed email link can be sent after review even if the USB is disconnected,
-  because the manual upload is already complete. Attachment mode still needs USB.
-- Only swisstransfer.com/d/<transfer-ID> HTTPS links are accepted. Links are
-  validated locally, never fetched or opened automatically by the backend.
-  The app cannot verify which files the third-party link contains, whether a
-  password was set or whether the transfer has expired. Check this manually.
-- Opening a new selection clears the previous transfer link and confirmation.
-  Switching patients also clears the previous recipient and custom message.
-  Changing the link invalidates its confirmation and the prepared email.
-  The reviewed link is frozen with the recipient/message. Send cannot substitute
-  a different URL. Single-patient grouping and no-automatic-retry rules remain.
-- No recording-duration limit, payment tier or recording quality setting changes
-  are introduced. Video duration alone does not determine attachment size.
-SwissTransfer instructions: https://www.infomaniak.com/en/support/faq/2557/
+Cloudflare R2 video-link emails (version 1.0.54):
+- Settings > Cloud video sharing: save the Cloudflare Account ID, private bucket
+  name and S3 Access Key ID / Secret Access Key. Keys are Windows-user DPAPI
+  encrypted in AppData and never returned to the browser after saving.
+- Create a dedicated private Standard R2 bucket. Leave public access disabled.
+  Grant object read/write and bucket lifecycle-read permission. Add an enabled
+  lifecycle rule for prefix miracle-of-life/ to delete objects after 8 days.
+  Check connection verifies access and this exact rule; it does not change any
+  existing rules. Lifecycle deletion may take longer than the configured period.
+- In an album, select videos and images > Email selected > Upload videos + attach images. Confirm the
+  patient and videos, then Upload selected videos. Each MP4 uploads directly
+  with its own neutral object name and seven-day link. No ZIP or local staging
+  copy is made. Selected images at or below 25 MB total attach to the same email. When
+  images exceed 25 MB, an explicit Upload images too option sends image links
+  instead. Confirm this choice before uploading. Image-only selections over
+  25 MB also offer this option. Original MP4/PNG/JPEG files upload directly,
+  each with a clickable filename and seven-day link. No ZIP files are created.
+- Uploading blocks recording, USB copying, deletion and tray exit. Keep the USB
+  connected until uploading and sending image attachments finish. USB originals are never changed or removed.
+  File identity and remote size are verified before any links are published.
+- Failed batches publish no links and attempt to delete only their new cloud
+  objects. Lifecycle deletion is the fallback if cloud cleanup cannot finish.
+  Incomplete multipart uploads are subject to R2's multipart lifecycle policy.
+- After upload, Review email shows each filename as a clickable link, then Send
+  email sends an HTML email with the same clickable filenames and seven-day
+  links. Plain-text mail readers get a URL fallback. The existing Gmail
+  app-password setup is used. No OAuth is needed. Only
+  links created by this app for that selection can be reviewed; pasted external
+  links are not accepted. Review itself does not send an email.
+- Anyone possessing the link can download its video. The bucket stays private;
+  links grant access to one video. Links are not password protected or tied to a
+  recipient. Use family USB instead if this access model is unsuitable.
+- Cloudflare currently includes a limited free allowance; usage beyond it may
+  be billed. Retention helps control storage but is not a spending cap. Monitor
+  the Cloudflare account. Forgetting keys does not remove uploaded objects.
+- Upload tickets are kept only for the running app session. Restarting the app
+  loses unsent upload tickets; existing cloud copies still expire/delete normally.
+- Existing Gmail attachments and verified family USB copying remain available.
+
+Cloudflare setup and limits:
+https://developers.cloudflare.com/r2/get-started/s3/
+https://developers.cloudflare.com/r2/buckets/object-lifecycles/
+https://developers.cloudflare.com/r2/api/s3/presigned-urls/
+https://developers.cloudflare.com/r2/pricing/
 
 Before replacing a working EXE:
 Build and test a separate candidate using dummy patient information. Verify
@@ -624,3 +642,26 @@ If needed, select .venv\Scripts\python.exe using Python: Select Interpreter,
 then open a new terminal. Existing terminals may still use the old interpreter.
 Close the existing recorder from its tray menu after finishing any recording
 before relaunching; single-instance protection otherwise reopens the old app.
+
+Upload and email progress (version 1.0.56):
+- Uploading shows percentage, transferred bytes and verified file count. It
+  reaches 100% only after all uploaded files are checked.
+- Email sending shows an animated bar and preparation, connection and sending
+  stages. Completion means Gmail accepted the message, not confirmed delivery.
+- Failed or uncertain sends stop the indicator and retain the existing warning
+  to check Gmail Sent. Progress never triggers automatic resending.
+
+Gmail send confirmation (version 1.0.57):
+- Connection/sign-in retains its 30-second timeout. Message transfer and
+  confirmation allow up to ten minutes per socket operation for slower uploads.
+- Timeout/disconnection warnings mean acceptance is uncertain. Check Gmail Sent
+  before sending again. No automatic retry occurs. Error details use safe
+  categories only, never raw server messages, addresses or patient paths.
+
+Recording shortcut (version 1.0.58):
+- On Preview & record with the browser focused, press F9 to start recording.
+  Press F9 again to Stop & save. Some laptop keyboards require Fn+F9.
+- Held keys and presses during start/save are ignored. If a save needs retry,
+  F9 retries saving; it does not start another recording. Recovery blocks,
+  typing fields and open dialogs still prevent the recording shortcut.
+- F8 (or Ctrl+Alt+S) remains the snapshot shortcut.

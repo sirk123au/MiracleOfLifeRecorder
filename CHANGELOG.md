@@ -1,5 +1,54 @@
 # Release notes
 
+## 1.0.58
+
+- Updated the branded client quick-start PDF and email template for shortcuts, combined sharing, progress and setup. Releases include the matching PDF when available.
+
+- Added F9 to toggle Start recording and Stop & save on the focused Preview & record page. F8 remains snapshot. F9 retries a pending save instead of starting another recording.
+- Blocked shortcuts and duplicate button actions while starting/stopping/saving, including during status refresh. Typing, dialogs, other pages, held keys and recovery blocks do not trigger recording.
+
+## 1.0.57
+
+- Retained the 30-second Gmail connection timeout but allowed up to ten minutes per send operation for slower attachment uploads and confirmation.
+- Added specific timeout/connection-loss messages and safe error categories. Uncertain sends still require checking Gmail Sent; no automatic retry is introduced.
+- Added send-timeout, pre-transfer failure and real SMTP message-encoding tests without network or email delivery.
+
+## 1.0.56
+
+- Added upload progress showing actual bytes transferred, percentage and files verified. Completion is shown only after upload verification.
+- Added animated email progress with preparation, Gmail connection and sending stages; completion appears after Gmail accepts the message. No delivery percentage is estimated.
+
+## 1.0.55
+
+- Added F8 as the primary snapshot shortcut on Preview & record, retaining Ctrl+Alt+S. The handler supports keyboard layouts reporting Ctrl+Alt as AltGr and key events without a physical key code.
+- Shortcuts remain browser focused and ignore typing fields, open dialogs, held keys and an in-progress capture.
+
+## 1.0.54
+
+- When selected images exceed 25 MB, offer an explicit option to upload the images and email clickable filename links. Supports image-only and combined video/image emails, without ZIP files.
+- Smaller image selections stay as attachments. The reviewed upload choice is bound to the selected files; changing it invalidates the previous upload review.
+
+## 1.0.53
+
+- Email selected videos and images together: videos upload to R2 and appear as clickable filenames; images attach to the same reviewed Gmail email. Selections containing video default to this option.
+- The 25 MB attachment limit applies only to images in this mode and is checked before uploading. Images are never uploaded to cloud storage; attachment identity checks and explicit Send remain.
+
+## 1.0.52
+
+- Video emails and the review dialog show each video filename as a clickable link instead of displaying the full signed URL. HTML email safely escapes message text and filenames; a plain-text fallback retains usable URLs.
+- Filenames and destinations are frozen with the reviewed email. Existing attachment emails are unchanged.
+
+## 1.0.51
+
+- Cloud sharing uploads original MP4 videos directly, with an individual seven-day email link per video. Removed ZIP packaging and local upload staging.
+- Cloud upload accepts videos only; images retain the Gmail attachment option. Failed batches attempt cleanup of their new cloud objects while preserving USB originals.
+
+## 1.0.50
+
+- Replaced manual SwissTransfer sharing with confirmed Cloudflare R2 uploads from saved albums. Selected files are packaged into a neutral ZIP; the reviewed Gmail email contains a seven-day private-object download link. Existing attachment and family USB options remain.
+- Added encrypted cloud credentials and a connection check in Settings. Uploads require an eight-day lifecycle deletion rule and keep USB originals. Upload failures never send email or expose raw service errors.
+- Added upload workflow, file-change, staging cleanup, retention, credentials and SDK link tests; packaged builds include the S3 client.
+
 ## 1.0.49
 
 - Added a SwissTransfer download-link option to album emails, alongside existing attachments and family USB handover. Larger selections open in link mode; attachment emails retain the 25 MB limit.

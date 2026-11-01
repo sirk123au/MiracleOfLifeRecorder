@@ -1,4 +1,5 @@
 import json
+import io
 from pathlib import Path
 import smtplib
 import tempfile
@@ -26,6 +27,26 @@ class GmailSMTP(unittest.TestCase):
 
     def send(self):
         return self.client.send('family@example.com','Ultrasound','Review',[self.item],self.client.revision())
+
+    def test_progress_reports_preparation_connection_and_sending(self):
+        updates=[]
+        with patch.object(gmail_share.smtplib,'SMTP_SSL') as factory:
+            smtp=factory.return_value
+            def accepted(*args,**kwargs):
+                self.assertEqual(updates[-1][0],'sending')
+                return {}
+            smtp.send_message.side_effect=accepted
+            result=self.client.send('family@example.com','Ultrasound','Review',[self.item],self.client.revision(),progress=lambda stage,message:updates.append((stage,message)))
+        self.assertEqual([stage for stage,message in updates],['preparing','connecting','sending'])
+        self.assertEqual(result['state'],'sent')
+        self.assertNotIn('family@example.com',str(updates))
+
+    def test_progress_display_failure_does_not_duplicate_or_fail_send(self):
+        with patch.object(gmail_share.smtplib,'SMTP_SSL') as factory:
+            factory.return_value.send_message.return_value={}
+            result=self.client.send('family@example.com','Ultrasound','Review',[self.item],self.client.revision(),progress=Mock(side_effect=RuntimeError('display unavailable')))
+        self.assertEqual(result['state'],'sent')
+        factory.return_value.send_message.assert_called_once()
 
     def test_tls_login_and_original_attachment_no_private_filename(self):
         with patch.object(gmail_share.smtplib,'SMTP_SSL') as factory:
@@ -61,6 +82,48 @@ class GmailSMTP(unittest.TestCase):
             factory.return_value.send_message.return_value={}
             factory.return_value.close.side_effect=OSError('connection closed')
             self.assertEqual(self.send()['state'],'sent')
+
+    def test_attachment_transfer_has_longer_timeout_and_does_not_retry(self):
+        with patch.object(gmail_share.smtplib,'SMTP_SSL') as factory:
+            smtp=factory.return_value
+            def send(*args,**kwargs):
+                smtp.sock.settimeout.assert_called_once_with(600)
+                raise TimeoutError('private address and path')
+            smtp.send_message.side_effect=send
+            with self.assertRaisesRegex(gmail_share.SendUncertain,'timed out') as error:self.send()
+        self.assertNotIn('private address',str(error.exception))
+        smtp.send_message.assert_called_once()
+        self.assertEqual(factory.call_args.kwargs['timeout'],30)
+
+    def test_socket_failure_before_transfer_is_a_definite_failure(self):
+        with patch.object(gmail_share.smtplib,'SMTP_SSL') as factory:
+            smtp=factory.return_value;smtp.sock.settimeout.side_effect=OSError('private path')
+            with self.assertRaises(gmail_share.GmailError) as error:self.send()
+        self.assertNotIsInstance(error.exception,gmail_share.SendUncertain)
+        self.assertIn('No email was sent',str(error.exception))
+        smtp.send_message.assert_not_called()
+
+    def test_unexpected_send_failure_reports_only_safe_error_class(self):
+        with patch.object(gmail_share.smtplib,'SMTP_SSL') as factory:
+            factory.return_value.send_message.side_effect=ValueError('private-recipient@example.com')
+            with self.assertRaises(gmail_share.SendUncertain) as error:self.send()
+        self.assertIn('ValueError',str(error.exception))
+        self.assertNotIn('private-recipient',str(error.exception))
+
+    def test_real_smtp_message_encoding_for_links_and_images_without_network(self):
+        from test_transfer_links import LINK
+        smtp=smtplib.SMTP(local_hostname='localhost')
+        smtp.sock=Mock();wire=smtp.sock
+        smtp.file=io.BytesIO(b'250 sender accepted\r\n250 recipient accepted\r\n354 send data\r\n250 queued\r\n')
+        smtp.ehlo_resp=b'OK';smtp.does_esmtp=True;smtp.esmtp_features={'size':'50000000'}
+        with patch.object(self.client,'connection',return_value=smtp):
+            result=self.client.send('family@example.com','Your ultrasound',LINK,[self.item],self.client.revision(),download_link=LINK)
+        self.assertEqual(result['state'],'sent')
+        wire.settimeout.assert_called_once_with(600)
+        data=wire.sendall.call_args_list[-1].args[0]
+        self.assertIn(b'multipart/mixed',data)
+        self.assertIn(b'image/png',data)
+        self.assertIn(b'text/html',data)
 
     def test_definite_rejection_and_connection_check(self):
         with patch.object(gmail_share.smtplib,'SMTP_SSL') as factory:

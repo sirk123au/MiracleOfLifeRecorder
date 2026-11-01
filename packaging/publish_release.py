@@ -53,9 +53,13 @@ def publish():
             'body':notes+'\n\nDownload the Setup EXE below. SHA256SUMS.txt verifies the installer. Finish recording/sharing and exit the recorder from the tray before installing.','draft':True,'prerelease':False})
     if not release['draft']:raise RuntimeError('This release is already published; published assets will not be replaced.')
     data=installer.read_bytes();digest=hashlib.sha256(data).hexdigest()
+    assets=[(name,data,'application/vnd.microsoft.portable-executable')]
+    guide=ROOT/'dist'/'client'/f'Miracle-of-Life-Quick-Start-{__version__}.pdf'
+    if guide.is_file():assets.append((guide.name,guide.read_bytes(),'application/pdf'))
     checksums=installer.parent/'SHA256SUMS.txt'
-    checksums.write_text(digest+'  '+name+'\n',encoding='ascii')
-    for filename,payload,content in [(name,data,'application/vnd.microsoft.portable-executable'),('SHA256SUMS.txt',checksums.read_bytes(),'text/plain')]:
+    checksums.write_text(''.join(hashlib.sha256(payload).hexdigest()+'  '+filename+'\n' for filename,payload,content in assets),encoding='ascii')
+    assets.append(('SHA256SUMS.txt',checksums.read_bytes(),'text/plain'))
+    for filename,payload,content in assets:
         existing=next((item for item in release['assets'] if item['name']==filename),None)
         expected='sha256:'+hashlib.sha256(payload).hexdigest()
         if existing:
