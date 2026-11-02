@@ -1,5 +1,6 @@
 import base64
 import io
+import os
 import types
 import unittest
 from unittest.mock import Mock, patch
@@ -19,6 +20,64 @@ class Album(unittest.TestCase):
         patcher.start();self.addCleanup(patcher.stop)
     post=test_workflows.Workflows.post
     start=test_workflows.Workflows.start
+
+    def test_recording_list_registers_only_newest_page(self):
+        folder=self.root/'Patients'/'DUMMY'
+        folder.mkdir(parents=True)
+        for index in range(205):
+            path=folder/f'video_{index:03d}.mp4'
+            path.write_bytes(b'video')
+            os.utime(path,(1700000000+index,1700000000+index))
+        staging=folder/'_staging'
+        staging.mkdir()
+        (staging/'unfinished.mp4').write_bytes(b'pending')
+        response=self.post('/api/files')
+        self.assertEqual(response.status_code,200,response.json)
+        files=response.json['files']
+        self.assertEqual(len(files),200)
+        self.assertEqual(files[0]['name'],'video_204.mp4')
+        self.assertEqual(files[-1]['name'],'video_005.mp4')
+        self.assertEqual(len(recorder.playback_files),200)
+        for item in files:
+            self.assertEqual(recorder.selected_media(item['key'])['path'].name,item['name'])
+
+    def test_album_limit_keeps_newest_media_and_reports_truncation(self):
+        folder=self.root/'Patients'/'DUMMY';folder.mkdir(parents=True)
+        for index in range(505):
+            path=folder/f'file_{index:03d}.png';path.write_bytes(b'image')
+            os.utime(path,(1700000000+index,1700000000+index))
+        response=self.post('/api/album')
+        self.assertEqual(response.status_code,200,response.json)
+        files=response.json['albums'][0]['files']
+        self.assertTrue(response.json['limited'])
+        self.assertEqual(len(files),500)
+        self.assertEqual(files[0]['name'],'file_504.png')
+        self.assertEqual(files[-1]['name'],'file_005.png')
+        self.assertEqual(len(recorder.playback_files),500)
+        for file in (files[0],files[-1]):
+            self.assertEqual(recorder.selected_media(file['key'])['path'].name,file['name'])
+        # Narrowing the search must still scan the complete collection.
+        result=self.post('/api/album',{'q':'missing-patient'})
+        self.assertEqual(result.json['albums'],[])
+        self.assertFalse(result.json['limited'])
+
+    def test_large_jpeg_thumbnail_keeps_original_file_unchanged(self):
+        folder=self.root/'Patients'/'DUMMY';folder.mkdir(parents=True)
+        path=folder/'snapshot.jpg';Image.new('RGB',(3000,2000),'navy').save(path,'JPEG')
+        original=path.read_bytes()
+        key=self.post('/api/album').json['albums'][0]['files'][0]['key']
+        response=self.client.get('/image?thumb=1&id='+key,headers=self.headers)
+        self.assertEqual(response.status_code,200)
+        with Image.open(io.BytesIO(response.data)) as thumbnail:
+            self.assertEqual(thumbnail.format,'JPEG')
+            self.assertLessEqual(thumbnail.width,480);self.assertLessEqual(thumbnail.height,320)
+        self.assertEqual(path.read_bytes(),original)
+
+    def test_image_name_lookup_returns_only_name_and_id(self):
+        self.snapshot(name='Example "Family"',notes='Dummy private notes')
+        names=recorder.media_store.image_names(self.data_root,'TESTVOL')
+        self.assertEqual(next(iter(names.values())),{'patient_id':'DUMMY','name':'Example "Family"'})
+
     def snapshot(self, **extra):
         output=io.BytesIO()
         Image.new('RGB',(16,12),'pink').save(output,format='PNG')

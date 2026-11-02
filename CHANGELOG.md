@@ -1,5 +1,11 @@
 # Release notes
 
+## 1.0.59
+
+- Streamed album/recording metadata into bounded newest-page selection instead of retaining every media entry. Kept existing listing and thumbnail improvements.
+- Debounced album searches and prevented overlapping status polls while preserving fresh recording state after start/save operations.
+- Reduced image-name database reads to patient ID and name, without decoding full scan notes. Added large-album ordering/limit, thumbnail preservation and metadata projection checks.
+
 ## 1.0.58
 
 - Updated the branded client quick-start PDF and email template for shortcuts, combined sharing, progress and setup. Releases include the matching PDF when available.

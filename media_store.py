@@ -19,9 +19,9 @@ def image_names(root,volume):
     if not (root/'patient-records.sqlite3').is_file():return {}
     connection=patient_store.connect(root)
     try:
-        rows=connection.execute("""SELECT i.relative_path,p.patient_id,p.details FROM patient_images i
+        rows=connection.execute("""SELECT i.relative_path,p.patient_id,json_extract(p.details, '$.name') AS name FROM patient_images i
             JOIN patient_records p ON i.record_id=p.id WHERE i.volume=?""",(volume,)).fetchall()
-        return {row['relative_path']:{'patient_id':row['patient_id'],'name':json.loads(row['details']).get('name','')} for row in rows}
+        return {row['relative_path']:{'patient_id':row['patient_id'],'name':row['name'] or ''} for row in rows}
     finally:connection.close()
 
 
