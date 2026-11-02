@@ -665,3 +665,12 @@ Recording shortcut (version 1.0.58):
   F9 retries saving; it does not start another recording. Recovery blocks,
   typing fields and open dialogs still prevent the recording shortcut.
 - F8 (or Ctrl+Alt+S) remains the snapshot shortcut.
+
+Patient email address (version 1.0.60):
+- Optional on Patient information. Save details to store the address in AppData.
+- Existing records without an email load with a blank field. New patient clears
+  it. Scan history retains the saved address for each version.
+- Album email sharing uses the current saved contact as the default recipient.
+  Manual recipient overrides remain available; Review and Send are still required.
+- Contact lookups use authenticated POST requests and registered file selections;
+  email addresses are never added to browser URLs or recording USB metadata.

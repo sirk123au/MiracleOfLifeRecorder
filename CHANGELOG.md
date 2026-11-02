@@ -1,5 +1,10 @@
 # Release notes
 
+## 1.0.60
+
+- Added an optional validated email address to the patient form and saved history in AppData. Existing patients without an email remain compatible.
+- Album sharing prefills the current saved contact address while retaining manual recipient overrides and the explicit email review/send steps. Recipient lookups use authenticated POST requests, never patient information in URLs.
+
 ## 1.0.59
 
 - Streamed album/recording metadata into bounded newest-page selection instead of retaining every media entry. Kept existing listing and thumbnail improvements.

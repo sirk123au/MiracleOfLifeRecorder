@@ -78,6 +78,27 @@ class Album(unittest.TestCase):
         names=recorder.media_store.image_names(self.data_root,'TESTVOL')
         self.assertEqual(next(iter(names.values())),{'patient_id':'DUMMY','name':'Example "Family"'})
 
+    def test_email_recipient_uses_current_patient_contact_without_sending(self):
+        key=self.snapshot(email='original@example.com').json['key']
+        changed=test_workflows.Workflows.update_patient(self,{'patient_id':'DUMMY','name':'Example Patient','email':'updated@example.com'})
+        self.assertEqual(changed.status_code,200,changed.json)
+        response=self.post('/api/gmail/recipient',{'keys':[key]})
+        self.assertEqual(response.status_code,200,response.json)
+        self.assertEqual(response.json,{'email':'updated@example.com'})
+        self.gmail.send.assert_not_called()
+        self.assertEqual(self.client.post('/api/gmail/recipient',json={'keys':[key]}).status_code,403)
+        self.assertEqual(self.post('/api/gmail/recipient',{'keys':['not-registered']}).status_code,409)
+
+    def test_email_recipient_is_blank_for_older_patient_and_rejects_mixed_patients(self):
+        first=self.snapshot().json['key']
+        connection=recorder.patient_store.connect(self.data_root)
+        try:
+            with connection:connection.execute("UPDATE patient_records SET details=json_remove(details, '$.email')")
+        finally:connection.close()
+        self.assertEqual(self.post('/api/gmail/recipient',{'keys':[first]}).json,{'email':''})
+        second=self.snapshot(patient_id='OTHER',email='other@example.com').json['key']
+        self.assertEqual(self.post('/api/gmail/recipient',{'keys':[first,second]}).status_code,400)
+
     def snapshot(self, **extra):
         output=io.BytesIO()
         Image.new('RGB',(16,12),'pink').save(output,format='PNG')
@@ -110,13 +131,14 @@ class Album(unittest.TestCase):
         self.obs.get_source_screenshot.assert_called_with('Ultrasound','png',16,12,100)
 
     def test_active_snapshot_uses_recording_patient(self):
-        self.start(name='Recording Patient')
-        response=self.snapshot(patient_id='OTHER',name='Changed form')
+        self.start(name='Recording Patient',email='recording@example.com')
+        response=self.snapshot(patient_id='OTHER',name='Changed form',email='changed@example.com')
         self.assertEqual(response.status_code,200,response.json)
         self.assertEqual(response.json['patient_id'],'DUMMY')
         self.assertFalse((self.root/'Patients'/'OTHER').exists())
         item=recorder.selected_media(response.json['key'])
         self.assertEqual(item['details']['name'],'Recording Patient')
+        self.assertEqual(item['details']['email'],'recording@example.com')
 
     def test_snapshot_link_failure_retains_image(self):
         with patch.object(recorder.media_store,'link_image',side_effect=OSError('private path')):

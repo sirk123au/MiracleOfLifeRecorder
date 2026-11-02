@@ -2,6 +2,8 @@
 import json
 import secrets
 import sqlite3
+import re
+from email.utils import parseaddr
 import patient_folders
 from datetime import datetime
 
@@ -66,17 +68,29 @@ def delete(root, patient_id, expected_id):
 
 def validate_details(data):
     details = {}
-    for key, limit in [('name', 200), ('dob', 10), ('scan', 100), ('notes', 10000)]:
+    for key, limit in [('name', 200), ('email', 254), ('dob', 10), ('scan', 100), ('notes', 10000)]:
         value = data.get(key, '')
         if not isinstance(value, str) or len(value) > limit:
             raise PatientValidationError(f'Invalid {key}; maximum {limit} characters')
         details[key] = value.strip()
+    if details['email'] and (any(ord(c)<32 or ord(c)==127 for c in details['email']) or parseaddr(details['email'])[1]!=details['email'] or not re.fullmatch(r'[^@\s<>;,]+@(?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,63}',details['email'])):
+        raise PatientValidationError('Enter one valid email address, or leave it blank')
     if details['dob']:
         try:
             datetime.strptime(details['dob'], '%d/%m/%Y')
         except ValueError:
             raise PatientValidationError('Enter baby’s date of birth as a valid date in DD/MM/YYYY format') from None
     return details
+
+
+def contact_email(root,patient_id):
+    """Current contact only; historical scan details are kept unchanged."""
+    if not (root/'patient-records.sqlite3').is_file():return ''
+    connection=connect(root)
+    try:
+        row=connection.execute("SELECT json_extract(details, '$.email') AS email FROM patient_records WHERE patient_id=? ORDER BY rowid DESC LIMIT 1",(patient_id,)).fetchone()
+        return (row['email'] or '') if row else ''
+    finally:connection.close()
 
 
 def connect(root):

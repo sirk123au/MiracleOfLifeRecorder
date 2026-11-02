@@ -33,7 +33,7 @@ def create():
     <li>Make a short test recording and play it back before the next appointment. The pre-session test is in <b>Settings</b>.</li></ol>
     <h2>2. Prepare for the scan</h2><ul><li>Connect Blackmagic and your selected recording USB. Check the bottom USB status bar for readiness and remaining space.</li>
     <li>Check OBS is connected, the ultrasound is visible, and the selected audio/music is correct.</li>
-    <li>Enter or find the patient. Use <b>Generate ID</b> for a new patient and enter the name, baby&rsquo;s expected birth date and scan type.</li></ul>
+    <li>Enter or find the patient. Use <b>Generate ID</b> for a new patient and enter the name, optional email address, baby&rsquo;s expected birth date and scan type.</li></ul>
     <h2>3. Record and save</h2><p>Open <b>Preview &amp; record</b> and check the patient name and ID. Use <b>Start recording</b>, then <b>Stop &amp; save</b> at the end. Wait for the saved confirmation before removing the USB.</p>
     <div class="card"><h2>Keyboard shortcuts</h2><p><span class="key">F9</span> Start recording; press again to <b>Stop &amp; save</b>.<br><span class="key">F8</span> Take a snapshot. <b>Ctrl + Alt + S</b> is also supported.</p><p>Use these on <b>Preview &amp; record</b> with the browser focused. Some laptops require <b>Fn + F9</b> or <b>Fn + F8</b>. Shortcuts ignore held keys, typing and open dialogs. F9 waits during start/save and retries a pending save instead of starting another recording.</p></div>
     <div class="note">Spotify stays paused during the intro and starts when the live scan begins. It pauses after recording stops. Check playback of a test clip to confirm the saved sound.</div>'''
@@ -46,7 +46,7 @@ def create():
     <h2>6. Email images and videos together</h2><ol><li>Select files in <b>one patient album</b>, then choose <b>Email selected</b>.</li>
     <li>For videos, use <b>Upload links + image attachments</b>. Check the patient and files, confirm uploading and select <b>Upload selected videos</b>. Videos upload directly; no ZIP file is created.</li>
     <li>Images totalling <b>25 MB or less</b> attach to the same email. For larger image selections, choose <b>Images exceed 25 MB: upload images too</b>, then upload the selected files. This also works for images without a video.</li>
-    <li>Enter the recipient and message. Patient-information fields are optional and unchecked by default.</li>
+    <li>Check the recipient and enter your message. The patient&rsquo;s saved email address is filled in when available and can be edited. Patient-information fields are optional and unchecked by default.</li>
     <li>Select <b>Review email</b>. Check the recipient, clickable filenames and attachment list, then select <b>Send email</b>. Keep the USB connected until image attachments finish sending.</li></ol>
     <div class="note"><b>Download links last seven days after upload.</b> Anyone with a link can open its file. Send only to the intended family and tell them to download their copies before expiry. Originals on the recording USB are kept.</div>
     <div class="columns"><div class="card"><h2>Upload progress</h2><p>Shows transferred size, percentage and files verified. It reaches <b>100%</b> only after the uploaded files are checked.</p></div><div class="card"><h2>Email progress</h2><p>Shows preparation, Gmail connection and sending. Completion means Gmail accepted the message; it does not prove delivery.</p></div></div>
@@ -79,6 +79,7 @@ The latest Miracle of Life Ultrasound Recorder update is ready:
 This update includes:
 - F9 to start recording, then stop and save with the same key.
 - F8 for snapshots (Ctrl+Alt+S also works).
+- A saved patient email address to prefill sharing.
 - One email with clickable video links and image attachments.
 - An upload-link option when selected images exceed 25 MB.
 - Upload progress, email sending status and improved Gmail error handling.

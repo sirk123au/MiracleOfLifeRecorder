@@ -364,6 +364,22 @@ class Workflows(unittest.TestCase):
         self.assertEqual(history[0]['notes'], 'Updated visit notes')
         self.assertEqual(history[1]['notes'], 'First visit\nAdditional notes')
 
+    def test_patient_email_is_optional_validated_and_saved_with_history(self):
+        details={'patient_id':'DUMMY','name':'Example Patient','email':'  family@example.com  '}
+        first=self.post('/api/patients/save',details)
+        self.assertEqual(first.status_code,200,first.json)
+        found=self.post('/api/patients/search',{'patient_id':'DUMMY'}).json['records']
+        self.assertEqual(found[0]['email'],'family@example.com')
+        for email in ['invalid','a@example.com,b@example.com','a@example.com\r\nBcc: other@example.com','a\x00@example.com',42,'x'*255]:
+            result=self.update_patient({**details,'email':email})
+            self.assertEqual(result.status_code,400,result.json)
+            self.assertNotIn(str(email),result.json['error'])
+        cleared=self.update_patient({**details,'email':''})
+        self.assertEqual(cleared.status_code,200,cleared.json)
+        history=self.post('/api/patients/search',{'patient_id':'DUMMY'}).json['records']
+        self.assertEqual(history[0]['email'],'')
+        self.assertEqual(history[1]['email'],'family@example.com')
+
     def test_recording_links_to_original_details(self):
         self.start(name='Example Patient', dob='25/12/1990', notes='Scan notes', scan='Gender Scan')
         self.output()
